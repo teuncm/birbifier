@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@theme {
+  --color-moss: #355a36;
+  --color-sage: #edf3e3;
+  --color-muted: #737c6d;
+  --color-line: #e4e8dc;
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@layer base {
+  body { margin: 0; background: #f6f7f2; color: #293327; -webkit-font-smoothing: antialiased; }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; transition: background-color 150ms, border-color 150ms, color 150ms; }
+  button:disabled { cursor: wait; opacity: 0.6; }
+  button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid #638347; outline-offset: 4px; }
+}
+@layer components {
+  .panel { @apply rounded-xl border border-line bg-white; box-shadow: 0 2px 4px #29332703; }
+  .button-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-moss px-4 text-sm font-medium text-white hover:bg-[#284a29]; }
+  .button-secondary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line bg-white px-3.5 text-xs font-medium hover:bg-sage; }
+  .icon-button { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:bg-sage; }
+  .repeat-button { @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm text-muted hover:bg-sage; }
+  .repeat-button.selected { @apply border-[#c3d4b2] bg-sage text-moss; }
+  .number-chip { @apply flex h-9 w-9 items-center justify-center rounded-lg bg-sage font-mono text-xs text-moss; }
+  .shape-button { @apply flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-lg border border-line bg-[#fcfdf9] text-xs text-muted hover:border-[#a8bf91]; }
+  .shape-button.selected { @apply border-[#89a96b] bg-sage font-semibold text-moss; }
+  .value-readout { @apply rounded-md bg-[#f3f5ef] px-2 py-1 font-mono text-xs text-[#4d6041]; }
+  .control-group { @apply overflow-hidden rounded-lg border border-line bg-white; }
+  .group-toggle { @apply flex min-h-11 w-full items-center justify-between gap-2 border-b border-line bg-[#f3f6ee] px-4 py-2 text-left text-sm font-semibold text-moss hover:bg-sage; }
+  .preset-select { @apply min-h-11 w-full cursor-pointer rounded-lg border border-[#c6d7b6] bg-sage px-3 text-sm font-medium text-moss; }
+  .parameter-lock { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-sage; }
+  .parameter-lock.selected { @apply bg-sage text-moss; }
+  .lfo-pad { @apply block h-24 w-full rounded-lg border border-line bg-[#f7f9f4]; touch-action: none; cursor: crosshair; }
+  .lfo-pad:focus-visible { outline: 2px solid #638347; outline-offset: 3px; }
+}
+input[type="range"] { display: block; width: 100%; height: 24px; margin: 0; appearance: none; -webkit-appearance: none; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(to right, #7f9c61 var(--fill), #e8ecdf var(--fill)); }
+input[type="range"]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 15px; height: 15px; margin-top: -5.5px; border: 3px solid white; border-radius: 50%; background: #668747; box-shadow: 0 0 0 1px #b8c9a6, 0 1px 3px #29332720; }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; background: #e8ecdf; }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: #7f9c61; }
+input[type="range"]::-moz-range-thumb { width: 9px; height: 9px; border: 3px solid white; border-radius: 50%; background: #668747; box-shadow: 0 0 0 1px #b8c9a6; }
+input[type="range"]:focus-visible { outline: 2px solid #638347; outline-offset: 3px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
