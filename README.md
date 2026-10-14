@@ -42,3 +42,13 @@ npm test
 ```
 
 To use an already installed Edge or Chrome browser instead, set `BIRBIFIER_TEST_CHANNEL` to `msedge` or `chrome`.
+
+## GitHub Pages
+
+In **Settings → Pages**, set **Source** to **GitHub Actions**. The
+**Deploy to GitHub Pages** workflow builds the app, then publishes
+only `dist` on every push to `main`; it can also be run manually. Publishing
+the source repository directly skips Vite and causes module-loading errors.
+
+Relative asset URLs support `https://teuncm.nl/birbifier/` and other repository
+subpaths. The custom domain stays configured on the account's main Pages site.
