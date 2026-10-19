@@ -50,6 +50,7 @@ const bird = computed(() => {
     beak,
     lift,
     footWidth: 3 + footBulk * 5,
+    legWidth: 2.5 + footBulk * 4,
     toeLength: 5 + footBulk * 5,
     stance: 6 + Math.max(0, Math.min(1, (s.cutoff - 200) / 19800)) * 18,
     feathers: 3 + Math.round(s.tremoloSpeed / 30 * 6),
@@ -84,7 +85,7 @@ function downloadBird() {
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
       <ellipse cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
       <g stroke="#665541" stroke-width="4" stroke-linecap="round" fill="none">
-        <path :d="`M143 ${150 - bird.lift}L${157 - bird.stance} 220M172 ${150 - bird.lift}L${157 + bird.stance} 220`" />
+        <path :stroke-width="bird.legWidth" :d="`M143 ${150 - bird.lift}L${157 - bird.stance} 220M172 ${150 - bird.lift}L${157 + bird.stance} 220`" />
         <path data-feet :stroke-width="bird.footWidth" :d="`M${157 - bird.stance - bird.toeLength} 223L${157 - bird.stance} 220l${bird.toeLength} 3M${157 + bird.stance - bird.toeLength} 223L${157 + bird.stance} 220l${bird.toeLength} 3`" />
       </g>
       <g :transform="`translate(0 ${-bird.lift})`">
