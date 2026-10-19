@@ -11,7 +11,7 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Birdsong synthesizer')
   await expect(page.locator('svg[role="img"] line')).toHaveCount(180)
@@ -25,7 +25,7 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   await expect(presetSelect.locator('option:checked')).toHaveText('Custom')
   await presetSelect.selectOption('Soft coo')
   await expect(page.locator('#frequency')).toHaveValue('480')
-  await page.getByRole('button', { name: 'Reset sound' }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await expect(page.locator('#frequency')).toHaveValue('2400')
   await expect(presetSelect).toHaveValue('Little chirp')
   const pendingDownload = page.waitForEvent('download')
@@ -38,12 +38,13 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await expect(page.getByRole('button', { name: 'Play song', exact: true })).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('mobile.png'), fullPage: true })
-  await page.getByRole('button', { name: 'Collapse all', exact: true }).click()
+  await page.getByRole('button', { name: 'Collapse', exact: true }).click()
   await expect(page.locator('input[type="range"]')).toHaveCount(0)
   await expect(page.locator('.lfo-pad')).toHaveCount(0)
   await expect(page.locator('.shape-button')).toHaveCount(0)
-  await expect(page.locator('output[data-parameter]')).toHaveCount(10)
+  await expect(page.locator('output[data-parameter]')).toHaveCount(11)
   await expect(page.getByRole('button', { name: /^Lock / })).toHaveCount(10)
+  await expect(page.getByRole('button', { name: 'Unlock Chorus', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('output[data-parameter="frequency"]')).toHaveText(await page.evaluate(() => `${(2400).toLocaleString()} Hz`))
   await expect(page.locator('output[data-parameter="shape"]')).toHaveText('Sine')
   await page.getByRole('button', { name: 'Lock Wave speed', exact: true }).click()
@@ -53,8 +54,8 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   const compactValues = await page.locator('output[data-parameter]').evaluateAll(outputs => Object.fromEntries(outputs.map(output => [output.dataset.parameter, output.textContent])))
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: test.info().outputPath('mobile-collapsed.png'), fullPage: true })
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click()
-  await expect(page.locator('input[type="range"]')).toHaveCount(9)
+  await page.getByRole('button', { name: 'Expand', exact: true }).click()
+  await expect(page.locator('input[type="range"]')).toHaveCount(10)
   await expect(page.locator('.lfo-pad')).toHaveCount(2)
   await expect(page.locator('.shape-button')).toHaveCount(3)
   for (const [id, value] of Object.entries(compactValues)) {
@@ -86,7 +87,7 @@ test('playback finishes, loops, stops, and survives immediate replay', async ({ 
     }
   })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   await page.getByRole('button', { name: 'Play song', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Stop song' })).toBeVisible()
@@ -115,11 +116,11 @@ test('playback finishes, loops, stops, and survives immediate replay', async ({ 
 
 test('actual audio has working wave shapes, modulation, gain, filter, fades, and WAV encoding', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const result = await page.evaluate(async () => {
     const { renderSong, defaultSettings, toWav } = await import('/src/audio.js')
-    const base = { ...defaultSettings, amplitude: 0.5, duration: 0.4, vibratoDepth: 0, tremoloDepth: 0, cutoff: 20000 }
+    const base = { ...defaultSettings, amplitude: 0.5, chorus: 0, duration: 0.4, vibratoDepth: 0, tremoloDepth: 0, cutoff: 20000 }
     const render = async overrides => (await renderSong({ ...base, ...overrides })).getChannelData(0)
     const rms = samples => Math.sqrt(samples.reduce((sum, x) => sum + x * x, 0) / samples.length)
     const difference = (a, b) => rms(a.map((sample, i) => sample - b[i]))
@@ -158,8 +159,8 @@ test('actual audio has working wave shapes, modulation, gain, filter, fades, and
   expect(result.riff).toBe('RIFF')
   expect(result.wave).toBe('WAVE')
   expect(result.sampleRate).toBe(44100)
-  expect(result.wavLength).toBe(44 + result.length * 2)
-  expect(result.dataLength).toBe(result.length * 2)
+  expect(result.wavLength).toBe(44 + result.length * 4)
+  expect(result.dataLength).toBe(result.length * 4)
 })
 
 test('a browser without Web Audio shows a useful error', async ({ page }) => {
@@ -170,7 +171,7 @@ test('a browser without Web Audio shows a useful error', async ({ page }) => {
     window.webkitOfflineAudioContext = undefined
   })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   await page.getByRole('button', { name: 'Play song', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('does not support audio synthesis')
@@ -180,13 +181,13 @@ test('a browser without Web Audio shows a useful error', async ({ page }) => {
 test('randomization respects each parameter lock and the duration bounds', async ({ page }) => {
   await page.addInitScript(() => { Math.random = () => 0.8 })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const parameters = [
     ['shape', 'Wave shape'], ['frequency', 'Wave speed'], ['amplitude', 'Amplitude'],
     ['vibratoSpeed', 'Vibrato speed'], ['vibratoDepth', 'Vibrato depth'],
     ['tremoloSpeed', 'Tremolo speed'], ['tremoloDepth', 'Tremolo depth'],
-    ['duration', 'Chirp duration'], ['cutoff', 'Cutoff'], ['pause', 'Repeat pause'],
+    ['chorus', 'Chorus'], ['duration', 'Chirp duration'], ['cutoff', 'Cutoff'], ['pause', 'Repeat pause'],
   ]
   const values = () => page.evaluate(() => ({
     shape: document.querySelector('.shape-button.selected').textContent.trim(),
@@ -196,7 +197,8 @@ test('randomization respects each parameter lock and the duration bounds', async
   await expect(page.locator('#duration')).toHaveAttribute('min', '0.5')
   await expect(page.locator('#duration')).toHaveAttribute('max', '2')
   for (const [key, label] of parameters) {
-    await page.getByRole('button', { name: 'Reset sound' }).click()
+    await page.getByRole('button', { name: 'Reset', exact: true }).click()
+    await page.getByRole('button', { name: 'Unlock Chorus', exact: true }).click()
     await page.getByRole('button', { name: `Lock ${label}`, exact: true }).click()
     await page.getByRole('button', { name: 'Randomize', exact: true }).click()
     expect((await values())[key]).toBe(defaults[key])
@@ -223,7 +225,7 @@ test.describe('LFO interaction', () => {
 test.use({ hasTouch: true })
 test('LFO visualizers respond to sliders, pointer drag, touch, and keyboard', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   for (const [id, maxSpeed, maxDepth] of [['vibrato', 40, 1200], ['tremolo', 30, 1]]) {
     const pad = page.locator(`#${id}-lfo`)
@@ -254,19 +256,19 @@ test('LFO visualizers respond to sliders, pointer drag, touch, and keyboard', as
 
 test('WAV export preserves both duration endpoints', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const lengths = await page.evaluate(async () => {
     const { defaultSettings, renderSong, toWav } = await import('/src/audio.js')
     const results = []
     for (const duration of [0.5, 2]) {
-      const buffer = await renderSong({ ...defaultSettings, duration })
+      const buffer = await renderSong({ ...defaultSettings, chorus: 0, duration })
       results.push({ duration: buffer.duration, samples: buffer.length, wavSize: toWav(buffer).size })
     }
     return results
   })
   expect(lengths).toEqual([
-    { duration: 0.5, samples: 22050, wavSize: 44144 },
-    { duration: 2, samples: 88200, wavSize: 176444 },
+    { duration: 0.5, samples: 22050, wavSize: 88244 },
+    { duration: 2, samples: 88200, wavSize: 352844 },
   ])
 })

@@ -4,6 +4,7 @@ export const parameterRanges = {
   tremoloSpeed: [0, 30, 0.1], tremoloDepth: [0, 1, 0.01],
   duration: [0.5, 2, 0.05], cutoff: [200, 20000, 100],
   pause: [0, 1, 0.05],
+  chorus: [0, 0.5, 0.01],
 }
 
 export function randomizeSettings(settings, locks, random = Math.random) {

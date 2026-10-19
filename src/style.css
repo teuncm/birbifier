@@ -15,17 +15,17 @@
 }
 @layer components {
   .panel { @apply rounded-xl border border-line bg-white; box-shadow: 0 2px 4px #29332703; }
-  .button-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-moss px-4 text-sm font-medium text-white hover:bg-[#284a29]; }
-  .button-secondary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line bg-white px-3.5 text-xs font-medium hover:bg-sage; }
-  .icon-button { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:bg-sage; }
-  .repeat-button { @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm text-muted hover:bg-sage; }
+  .button-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-moss px-4 text-sm font-medium text-white hover:bg-[#284a29]; }
+  .button-secondary { @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-white px-3.5 text-xs font-medium hover:bg-sage; }
+  .icon-button { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:bg-sage; }
+  .repeat-button { @apply inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm text-muted hover:bg-sage; }
   .repeat-button.selected { @apply border-moss bg-moss text-white ring-2 ring-[#c6d8b5] hover:bg-[#284a29]; }
-  .shape-button { @apply flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg border border-line bg-[#fcfdf9] text-xs text-muted hover:border-[#9db683]; }
+  .shape-button { @apply flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border border-line bg-[#fcfdf9] text-xs text-muted hover:border-[#9db683]; }
   .shape-button.selected { @apply border-[#7d9e60] bg-sage font-semibold text-moss; }
   .value-readout { @apply rounded-md bg-[#f0f4e9] px-2 py-1 font-mono text-xs text-[#465b39]; }
   .control-group { @apply overflow-hidden rounded-lg border border-line bg-white; }
-  .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line bg-[#f0f4e9] px-3 py-1 text-left text-sm font-semibold text-moss hover:bg-sage; }
-  .preset-select { @apply min-h-11 w-full cursor-pointer rounded-lg border border-[#b8cba8] bg-sage px-3 text-sm font-medium text-moss; }
+  .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line bg-[#f0f4e9] px-2 py-1 text-left text-sm font-semibold text-moss hover:bg-sage sm:px-3; }
+  .preset-select { @apply min-h-10 w-full cursor-pointer rounded-lg border border-[#b8cba8] bg-sage px-3 text-sm font-medium text-moss; }
   .parameter-lock { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-sage; }
   .parameter-lock.selected { @apply bg-[#dce8cf] text-moss ring-1 ring-inset ring-[#a4ba8d] hover:bg-[#d1e0c1]; }
   .lfo-pad { @apply block h-20 w-full rounded-lg border border-line bg-[#f7f9f4]; touch-action: none; cursor: crosshair; }

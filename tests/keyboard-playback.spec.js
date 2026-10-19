@@ -28,7 +28,7 @@ test('Down downloads a WAV without scrolling or starting playback', async ({ pag
 
 test('Left and Right browse, wrap, and play presets like the arrow buttons', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   const select = page.getByRole('combobox', { name: 'Presets' })
   const names = await select.locator('option:not([disabled])').allTextContents()
   await page.keyboard.press('ArrowLeft')
@@ -46,7 +46,7 @@ test('Left and Right browse, wrap, and play presets like the arrow buttons', asy
 
 test('arrow keys still edit focused sliders and XY controls without auditioning presets', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.locator('#frequency').focus()
   await page.keyboard.press('ArrowRight')
   await expect(page.locator('#frequency')).toHaveValue('2410')

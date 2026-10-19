@@ -9,12 +9,12 @@ async function setSlider(page, id, value) {
 
 test('sound settings generate reproducible birds and a standalone SVG download', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   const bird = page.getByRole('img', { name: 'Bird generated' })
   const original = await bird.innerHTML()
   await page.getByRole('button', { name: 'Randomize', exact: true }).click()
   await expect.poll(() => bird.innerHTML()).not.toBe(original)
-  await page.getByRole('button', { name: 'Reset sound' }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await expect.poll(() => bird.innerHTML()).toBe(original)
   // Every sound parameter contributes to the portrait.
   for (const [id, value] of Object.entries({ frequency: 8000, amplitude: 1, 'vibrato-speed': 40, 'vibrato-depth': 1200, 'tremolo-speed': 30, 'tremolo-depth': 1, duration: 2, pause: 1, cutoff: 200 })) {
@@ -38,7 +38,7 @@ test('sound settings generate reproducible birds and a standalone SVG download',
 
 test('beak sings during chirps, rests during repeat pauses, and closes on stop', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await setSlider(page, 'duration', 0.5)
   await setSlider(page, 'pause', 0.5)
   const bird = page.getByRole('img', { name: 'Bird generated' })

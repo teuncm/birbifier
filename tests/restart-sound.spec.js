@@ -12,7 +12,7 @@ for (const action of ['Reset', 'Randomize', 'Preset']) {
     await page.goto('/')
     const changeSound = () => action === 'Preset'
       ? page.getByRole('combobox', { name: 'Presets' }).selectOption('Little chirp')
-      : page.getByRole('button', { name: action === 'Reset' ? 'Reset sound' : 'Randomize', exact: true }).click()
+      : page.getByRole('button', { name: action === 'Reset' ? 'Reset' : 'Randomize', exact: true }).click()
     const status = page.getByRole('status', { name: 'Playback status' })
     const repeat = page.getByRole('button', { name: 'Repeat song', exact: true })
     await changeSound()

@@ -24,6 +24,7 @@ const bird = computed(() => {
   const tail = 24 + s.vibratoDepth / 1200 * 46
   const beak = 25 + s.pause * 24
   const lift = s.tremoloDepth * 24
+  const footBulk = Math.max(0, Math.min(1, (s.chorus ?? 0) / 0.5))
   // Keep exaggerated crests, beaks, and long tails inside the portrait.
   const left = Math.min(12, 94 - tail - 8)
   const top = Math.min(8, 104 - 84 * headScale - lift - 5)
@@ -48,6 +49,8 @@ const bird = computed(() => {
     spread: 5 + s.tremoloSpeed / 30 * 32,
     beak,
     lift,
+    footWidth: 3 + footBulk * 5,
+    toeLength: 5 + footBulk * 5,
     feathers: 3 + Math.round(s.tremoloSpeed / 30 * 6),
     spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 10) }, () => ({
       x: 128 + random() * 35, y: 136 + random() * 36, r: 1.5 + random() * 2.5,
@@ -80,7 +83,8 @@ function downloadBird() {
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
       <ellipse cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
       <g stroke="#665541" stroke-width="4" stroke-linecap="round" fill="none">
-        <path :d="`M143 ${150 - bird.lift}V220m-8 3 8-3 9 3M172 ${150 - bird.lift}V220m-8 3 8-3 9 3`" />
+        <path :d="`M143 ${150 - bird.lift}V220M172 ${150 - bird.lift}V220`" />
+        <path data-feet :stroke-width="bird.footWidth" :d="`M${143 - bird.toeLength} 223L143 220l${bird.toeLength} 3M${172 - bird.toeLength} 223L172 220l${bird.toeLength} 3`" />
       </g>
       <g :transform="`translate(0 ${-bird.lift})`">
       <g data-body>

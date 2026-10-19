@@ -11,6 +11,6 @@ defineEmits(['toggle'])
         <span class="flex items-center gap-2"><span v-if="caption" class="text-[10px] font-normal text-muted">{{ caption }}</span><AppIcon :name="expanded ? 'up' : 'down'" :size="16" /></span>
       </button>
     </h3>
-    <div :id="id" class="p-3"><slot /></div>
+    <div :id="id" class="p-2 sm:p-3"><slot /></div>
   </section>
 </template>
