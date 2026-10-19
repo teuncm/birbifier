@@ -10,6 +10,7 @@ import PresetSelector from './components/PresetSelector.vue'
 import BirdPortrait from './components/BirdPortrait.vue'
 import { createVoice, defaultSettings, presets, renderedDuration, renderSong, stopMasterEffects, updateMasterEffects, toWav } from './audio.js'
 import { randomizeSettings } from './randomize.js'
+import { buildWaveform } from './waveform.js'
 import { useBirdReflection } from './useBirdReflection.js'
 
 const initialPresetIndex = Math.floor(Math.random() * presets.length)
@@ -172,17 +173,7 @@ async function updatePreview() {
   try {
     const buffer = await renderSong({ ...settings })
     if (disposed || version !== previewVersion) return
-    const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData(channel))
-    const samples = channels[0]
-    bars.value = Array.from({ length: 180 }, (_, i) => {
-      const from = Math.floor(i * samples.length / 180)
-      const to = Math.floor((i + 1) * samples.length / 180)
-      let peak = 0
-      for (let j = from; j < to; j++) {
-        for (const channel of channels) peak = Math.max(peak, Math.abs(channel[j]))
-      }
-      return Math.max(1, peak * 600)
-    })
+    bars.value = buildWaveform(buffer)
   } catch { if (version === previewVersion) bars.value = [] }
   finally {
     previewRunning = false
@@ -267,6 +258,7 @@ onBeforeUnmount(() => {
                 <defs><pattern id="grid" width="60" height="36" patternUnits="userSpaceOnUse"><path d="M60 0H0V36" fill="none" stroke="#dae3d0" stroke-width="1" /></pattern></defs>
                 <rect width="720" height="144" fill="url(#grid)" />
                 <path d="M0 72H720" stroke="#acbf9b" stroke-width="1" />
+                <desc>Bar height shows the strongest peak from either stereo channel.</desc>
                 <line v-for="(height, i) in bars" :key="i" :x1="i * 4 + 2" :x2="i * 4 + 2" :y1="72 - height / 2" :y2="72 + height / 2" stroke="#628247" stroke-width="2" stroke-linecap="round" />
                 <PlaybackCursor v-if="playback" :playback="playback" />
               </svg>

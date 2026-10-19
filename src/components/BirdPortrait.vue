@@ -51,6 +51,7 @@ const bird = computed(() => {
     lift,
     footWidth: 3 + footBulk * 5,
     toeLength: 5 + footBulk * 5,
+    stance: 6 + Math.max(0, Math.min(1, (s.cutoff - 200) / 19800)) * 18,
     feathers: 3 + Math.round(s.tremoloSpeed / 30 * 6),
     spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 10) }, () => ({
       x: 128 + random() * 35, y: 136 + random() * 36, r: 1.5 + random() * 2.5,
@@ -83,8 +84,8 @@ function downloadBird() {
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
       <ellipse cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
       <g stroke="#665541" stroke-width="4" stroke-linecap="round" fill="none">
-        <path :d="`M143 ${150 - bird.lift}V220M172 ${150 - bird.lift}V220`" />
-        <path data-feet :stroke-width="bird.footWidth" :d="`M${143 - bird.toeLength} 223L143 220l${bird.toeLength} 3M${172 - bird.toeLength} 223L172 220l${bird.toeLength} 3`" />
+        <path :d="`M143 ${150 - bird.lift}L${157 - bird.stance} 220M172 ${150 - bird.lift}L${157 + bird.stance} 220`" />
+        <path data-feet :stroke-width="bird.footWidth" :d="`M${157 - bird.stance - bird.toeLength} 223L${157 - bird.stance} 220l${bird.toeLength} 3M${157 + bird.stance - bird.toeLength} 223L${157 + bird.stance} 220l${bird.toeLength} 3`" />
       </g>
       <g :transform="`translate(0 ${-bird.lift})`">
       <g data-body>
