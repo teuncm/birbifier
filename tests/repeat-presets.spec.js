@@ -16,6 +16,8 @@ test('preset arrows autoplay, wrap, and browse from the last chosen preset after
     }
   })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const select = page.getByRole('combobox', { name: 'Presets' })
   const names = await select.locator('option:not([disabled])').allTextContents()
   expect(names).toHaveLength(50)
@@ -59,6 +61,8 @@ test('rapid preset navigation plays only the latest request while audio is start
     }
   })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const next = page.getByRole('button', { name: 'Next preset' })
   await next.click()
   await expect.poll(() => page.evaluate(() => window.resumeQueue.length)).toBe(1)
@@ -77,11 +81,13 @@ test('rapid preset navigation plays only the latest request while audio is start
 
 test('playback frames do not reset a preset choice before it is committed', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const select = page.getByRole('combobox', { name: 'Presets' })
   await select.selectOption('Night song')
   await page.getByRole('button', { name: 'Play song', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Stop song' })).toBeVisible()
-  await expect(page.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false')
+  await expect(page.locator('div[aria-busy]')).toHaveAttribute('aria-busy', 'false')
   await page.waitForFunction(() => Number(document.querySelector('line[stroke="#355a36"]')?.getAttribute('x1')) > 20)
   const pendingChoice = await select.evaluate(async element => {
     // A native picker may change its selection before firing the change event.
@@ -114,6 +120,8 @@ test('playback frames do not reset a preset choice before it is committed', asyn
 
 test('every preset loads its controls and produces finite audible samples', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const presets = await page.evaluate(async () => (await import('/src/audio.js')).presets)
   for (const preset of presets) {
     await page.getByRole('combobox', { name: 'Presets' }).selectOption(preset.name)
@@ -134,20 +142,24 @@ test('every preset loads its controls and produces finite audible samples', asyn
       const buffer = await renderSong(preset.settings)
       const samples = buffer.getChannelData(0)
       const energy = samples.reduce((sum, sample) => sum + sample * sample, 0)
-      results.push({ name: preset.name, duration: buffer.duration, finite: samples.every(Number.isFinite), rms: Math.sqrt(energy / samples.length) })
+      results.push({ name: preset.name, duration: buffer.duration, finite: samples.every(Number.isFinite), rms: Math.sqrt(energy / samples.length), peak: samples.reduce((peak, sample) => Math.max(peak, Math.abs(sample)), 0) })
     }
     return results
   })
   for (const result of audio) {
     expect(result.finite, result.name).toBe(true)
-    expect(result.rms, result.name).toBeGreaterThan(0.01)
+    expect(result.rms, result.name).toBeGreaterThan(0.058)
+    expect(result.rms, result.name).toBeLessThan(0.062)
+    expect(result.peak, result.name).toBeLessThanOrEqual(0.250001)
     expect(result.duration, result.name).toBeGreaterThanOrEqual(0.5)
-    expect(result.duration, result.name).toBeLessThanOrEqual(5)
+    expect(result.duration, result.name).toBeLessThanOrEqual(2)
   }
 })
 
 test('tremolo stays centered at zero, partial, and full depth', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   await setSlider(page, 'tremolo-speed', 6)
   for (const depth of [0, 0.45, 1]) {
     await setSlider(page, 'tremolo-depth', depth)
@@ -175,6 +187,8 @@ test('repeat honors pause changes and cancels pending playback when disabled or 
     }
   })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset sound', exact: true }).click()
+  await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   await setSlider(page, 'duration', 0.5)
   await setSlider(page, 'pause', 0.6)
   const repeat = page.getByRole('button', { name: 'Repeat song', exact: true })

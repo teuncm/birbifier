@@ -7,6 +7,10 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
+  // All components use Composition API; omit Vue's unused Options API support.
+  define: {
+    __VUE_OPTIONS_API__: false,
+  },
   plugins: [
     tailwindcss(),
     vue(),

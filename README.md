@@ -18,19 +18,29 @@ npm run preview
 
 ## Make a song
 
+Each page load selects a random preset with Repeat enabled. Press Play to start. The Play button glows white twice after half a second; the hint respects reduced-motion preferences.
+
+Reset, Randomize, and selecting a preset from the dropdown restart the chirp when playback is active, including during repeat pauses. When stopped, these actions update the sound without starting playback. Preset arrows continue to audition sounds immediately.
+
+Preset amplitudes are calibrated to approximately 0.06 RMS (−24.4 dBFS) over each complete chirp, keeping average levels similar. Manual amplitude changes still control volume normally. Playback, preview, and WAV export share a final soft limiter: signals below 0.2 pass unchanged, and larger peaks smoothly approach a ceiling of 0.25 (−12 dBFS). This is RMS balancing, rather than perceptual loudness matching.
+
+Preview and WAV export share a four-entry cache of full-quality audio buffers, including renders already in progress. Repeat pause changes reuse the same audio. Rapid edits debounce previews and queue only the latest settings behind an active render. Live edits schedule only changed audio parameters. Vue's unused Options API is excluded from production builds.
+
 Choose sine, square, or sawtooth. Wave speed controls pitch in Hz, and amplitude controls volume. Vibrato adds pitch modulation (speed in Hz, depth in cents); tremolo adds volume modulation (speed in Hz, depth in percent). Set either modulation's depth to zero to disable it. The global low-pass cutoff softens high frequencies.
 
 Controls are grouped into Wave, Vibrato, Tremolo, Timing, and Low-pass filter. Toggle any group header or use Collapse all / Expand all. Collapsed groups retain labeled values and working parameter locks; expanded groups show the sliders, wave choices, and LFO visualizers. Collapsing preserves settings, locks, and playback.
 
 The Presets dropdown offers 50 sounds, including whistles, warbles, rattles, low calls, and electronic chirps. Use the left/right buttons to browse and immediately play the selected sound, wrapping at either end. Arrow navigation restarts playback from the beginning and preserves the Repeat setting. After custom edits, browsing continues from the last selected preset. Selecting a preset loads all parameters, including its repeat pause. Edits or randomization show Custom when the settings no longer match a preset.
 
-Chirp duration ranges from 0.5 to 5 seconds. Enable Repeat to play continuously with an adjustable pause of 0 to 3 seconds between chirps. Pause changes take effect during a pending pause; disabling Repeat finishes the current chirp and cancels any pending repeat. Stop cancels playback immediately. Download exports one chirp as a mono 16-bit WAV. Sound controls update during playback; duration changes apply on the next play. Playback, waveform preview, and export share the same audio graph, with short fades and conservative output headroom.
+Chirp duration ranges from 0.5 to 2 seconds. Enable Repeat to play continuously with an adjustable pause of 0 to 1 second between chirps. Pause changes take effect during a pending pause; disabling Repeat finishes the current chirp and cancels any pending repeat. Stop cancels playback immediately. Download exports one chirp as a mono 16-bit WAV. Sound controls update during playback; duration changes apply on the next play. Playback, waveform preview, and export share the same audio graph, with short fades and conservative output headroom.
 
 Vibrato and tremolo each have a centered one-second LFO visualizer showing modulation depth around zero. Drag horizontally to change speed and vertically to change depth, or focus the visualizer and use the arrow keys. The sliders remain available for precise adjustments.
 
 Randomize changes every unlocked parameter, including wave shape, duration, repeat pause, and filter cutoff. Each parameter has a lock button. Locks affect randomization; manual edits, presets, and reset remain available.
 
 Audio starts after pressing Play or a preset arrow. All synthesis and export happen locally in the browser. A recent browser with Web Audio support is required. Neural-network learning and multiple segments are future work.
+
+Your bird is a generated SVG portrait based on the current sound settings. Pitch and filter shape its colors; wave shape and amplitude shape its body; vibrato shapes its crest and tail; tremolo shapes its feathers and markings; duration and repeat pause shape its proportions and beak. Randomizing creates a new bird, and returning to the same settings restores the same portrait. Its beak moves during chirps and closes during repeat pauses or after stopping. Reduced-motion mode uses a still open beak while singing. Use the portrait's download button to save a standalone SVG.
 
 ## Verify
 
@@ -52,3 +62,9 @@ the source repository directly skips Vite and causes module-loading errors.
 
 Relative asset URLs support `https://teuncm.nl/birbifier/` and other repository
 subpaths. The custom domain stays configured on the account's main Pages site.
+
+## Search and sharing
+
+The canonical URL is `https://teuncm.nl/birbifier/`. Titles, descriptions, Open Graph and Twitter cards, and WebApplication structured data are served directly in the HTML. The initial HTML also describes the app before Vue mounts, including when JavaScript is disabled. The share card is `public/social-card.png`, with its editable source in `public/social-card.svg`.
+
+Link to `https://teuncm.nl/birbifier/` from the main site's HTML navigation or project list. Submit `https://teuncm.nl/birbifier/sitemap.xml` in Google Search Console, or add `Sitemap: https://teuncm.nl/birbifier/sitemap.xml` to the main site's `https://teuncm.nl/robots.txt`. A robots file inside `/birbifier/` has no effect; this repository does not control the domain root. If the app moves, update the canonical, social URLs, structured data, and sitemap together.

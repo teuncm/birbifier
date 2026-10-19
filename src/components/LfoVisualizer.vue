@@ -4,8 +4,9 @@ const props = defineProps({ id: String, name: String, speed: Number, depth: Numb
 const emit = defineEmits(['update:speed', 'update:depth'])
 const dragging = ref(false)
 const ratio = computed(() => props.depth / props.maxDepth)
+const sineSamples = computed(() => Float32Array.from({ length: 601 }, (_, i) => Math.sin(2 * Math.PI * props.speed * i / 600)))
 const path = computed(() => Array.from({ length: 601 }, (_, i) => {
-  const sine = Math.sin(2 * Math.PI * props.speed * i / 600)
+  const sine = sineSamples.value[i]
   const y = 52 - sine * ratio.value * 40
   return `${i === 0 ? 'M' : 'L'}${i},${y.toFixed(2)}`
 }).join(' '))
@@ -35,14 +36,17 @@ function keyboard(event) {
 }
 </script>
 <template>
-  <div class="mb-4">
+  <div class="mb-2">
+    <div class="lfo-surface relative" :class="{ 'is-dragging': dragging }">
     <svg :id="id" viewBox="0 0 600 104" preserveAspectRatio="none" class="lfo-pad" tabindex="0" role="group" :aria-label="`${name} LFO visualizer`" :aria-describedby="`${id}-help`" @pointerdown="start" @pointermove="dragging && updateFromPointer($event)" @pointerup="dragging = false" @pointercancel="dragging = false" @lostpointercapture="dragging = false" @keydown="keyboard">
-      <path d="M0 12H600M0 92H600M150 0V104M300 0V104M450 0V104" stroke="#e0e8d6" stroke-width="1" fill="none" />
-      <line x1="0" x2="600" y1="52" y2="52" stroke="#b4c5a4" stroke-width="1" />
-      <text x="5" y="48" fill="#737c6d" font-size="10" aria-hidden="true">0</text>
-      <path :d="path" stroke="#6c8c50" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
-      <circle :cx="20 + speed / maxSpeed * 560" :cy="92 - ratio * 80" r="5" fill="#355a36" stroke="white" stroke-width="2" />
+      <path d="M0 12H600M0 32H600M0 72H600M0 92H600M50 0V104M100 0V104M150 0V104M200 0V104M250 0V104M300 0V104M350 0V104M400 0V104M450 0V104M500 0V104M550 0V104" stroke="#dae3d0" stroke-width="1" fill="none" />
+      <line x1="0" x2="600" y1="52" y2="52" stroke="#acbf9b" stroke-width="1" />
+      <path :d="path" stroke="#628247" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
     </svg>
-    <div :id="`${id}-help`" class="mt-1 flex justify-between gap-2 text-[10px] text-muted"><span>Drag: speed → / depth ↑<span class="sr-only">. Arrow keys also adjust speed and depth.</span></span><span>1 second</span></div>
+    <div class="pointer-events-none absolute inset-px" aria-hidden="true">
+      <span class="lfo-dot absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-moss" :style="{ left: `${(20 + speed / maxSpeed * 560) / 600 * 100}%`, top: `${(92 - ratio * 80) / 104 * 100}%` }"></span>
+    </div>
+    </div>
+    <span :id="`${id}-help`" class="sr-only">Drag horizontally to adjust speed and vertically to adjust depth. Arrow keys also adjust speed and depth.</span>
   </div>
 </template>

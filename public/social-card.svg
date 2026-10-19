@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f6f7f2"/>
+  <rect x="70" y="65" width="1060" height="500" rx="32" fill="white" stroke="#e4e8dc" stroke-width="2"/>
+  <g transform="translate(845 135) scale(3.5)">
+    <rect width="64" height="64" rx="18" fill="#dce9c7"/>
+    <path d="M14 36c0-13 9-22 21-22 9 0 15 7 15 16L58 34 49 38c-3 12-15 17-27 10L10 49l6-9" fill="#355a36"/>
+    <path d="M22 33c2 9 11 10 18 3" fill="none" stroke="#dce9c7" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="41" cy="26" r="2" fill="#f6f7f2"/>
+  </g>
+  <g font-family="Segoe UI, system-ui, sans-serif">
+    <text x="130" y="213" font-size="76" font-weight="700" fill="#293327">Birbifier<tspan fill="#355a36">.</tspan></text>
+    <text x="133" y="275" font-size="32" fill="#4d6041">Birdsong synthesizer</text>
+    <text x="133" y="330" font-size="23" fill="#737c6d">50 presets · WAV export · SVG birds</text>
+    <text x="133" y="510" font-size="21" fill="#355a36">teuncm.nl/birbifier</text>
+  </g>
+  <path d="M133 415h48l8-15 8 30 8-51 8 72 8-88 8 105 8-120 8 132 8-138 8 140 8-132 8 116 8-99 8 80 8-61 8 43 8-26 8 13h38l8-20 8 40 8-59 8 76 8-88 8 95 8-94 8 84 8-67 8 45 8-22h42l8-13 8 25 8-34 8 39 8-35 8 24 8-12h316" fill="none" stroke="#7f9c61" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

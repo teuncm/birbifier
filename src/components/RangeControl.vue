@@ -14,7 +14,7 @@ const fill = computed(() => `${(props.modelValue - props.min) / (props.max - pro
 </script>
 <template>
   <div class="range-control">
-    <div class="flex items-center justify-between gap-2" :class="{ 'mb-3': expanded }">
+    <div class="flex items-center justify-between gap-2" :class="{ 'mb-1': expanded }">
       <label :id="`${id}-label`" :for="expanded ? id : undefined" class="text-sm font-medium">{{ label }}</label>
       <div class="flex items-center gap-1">
         <output :for="expanded ? id : undefined" :aria-labelledby="`${id}-label`" :data-parameter="id" class="value-readout">{{ valueLabel }}</output>

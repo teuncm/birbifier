@@ -5,11 +5,53 @@
     <link rel="icon" type="image/svg+xml" href="/birb.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#f6f7f2">
-    <meta name="description" content="Birdsong synthesizer with vibrato, tremolo, parameter locks, and WAV export.">
-    <title>Birbifier — birdsong synthesizer</title>
+    <meta name="description" content="Create bird sounds in your browser with Birbifier. Explore 50 presets, shape vibrato and tremolo, generate SVG birds, and download your birdsong as WAV.">
+    <title>Birbifier — Free Online Birdsong Synthesizer</title>
+    <link rel="canonical" href="https://teuncm.nl/birbifier/">
+    <link rel="sitemap" type="application/xml" href="./sitemap.xml">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Birbifier">
+    <meta property="og:title" content="Birbifier — Free Online Birdsong Synthesizer">
+    <meta property="og:description" content="Make bird sounds, explore 50 presets, and download your birdsong and its generated SVG bird.">
+    <meta property="og:url" content="https://teuncm.nl/birbifier/">
+    <meta property="og:image" content="https://teuncm.nl/birbifier/social-card.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Birbifier bird icon and birdsong waveform on a pale green background">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Birbifier — Free Online Birdsong Synthesizer">
+    <meta name="twitter:description" content="Make bird sounds, explore 50 presets, and download your birdsong and its generated SVG bird.">
+    <meta name="twitter:image" content="https://teuncm.nl/birbifier/social-card.png">
+    <meta name="twitter:image:alt" content="Birbifier bird icon and birdsong waveform on a pale green background">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "@id": "https://teuncm.nl/birbifier/#app",
+        "name": "Birbifier",
+        "url": "https://teuncm.nl/birbifier/",
+        "description": "A free browser-based birdsong synthesizer with 50 presets, vibrato, tremolo, WAV export, and generated SVG birds.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript and Web Audio API support.",
+        "isAccessibleForFree": true,
+        "inLanguage": "en",
+        "image": "https://teuncm.nl/birbifier/social-card.png",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "featureList": ["50 birdsong presets", "Vibrato and tremolo controls", "Lockable sound parameters", "WAV audio export", "Generated SVG bird portraits"]
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main class="mx-auto max-w-[1160px] px-5 py-12">
+        <h1>Birbifier — Birdsong synthesizer</h1>
+        <p>Create bird sounds with 50 presets, sine, square, and sawtooth waves, vibrato, tremolo, and a low-pass filter.</p>
+        <p>Adjust chirps from 0.5 to 2 seconds, repeat or randomize your sound, and download WAV audio or a generated SVG bird. Audio is generated locally in your browser.</p>
+        <noscript><p>Enable JavaScript to use the synthesizer. A browser with Web Audio support is required.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
