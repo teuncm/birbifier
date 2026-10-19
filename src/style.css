@@ -27,7 +27,7 @@
   .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line bg-[#f0f4e9] px-3 py-1 text-left text-sm font-semibold text-moss hover:bg-sage; }
   .preset-select { @apply min-h-11 w-full cursor-pointer rounded-lg border border-[#b8cba8] bg-sage px-3 text-sm font-medium text-moss; }
   .parameter-lock { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-sage; }
-  .parameter-lock.selected { @apply bg-sage text-moss; }
+  .parameter-lock.selected { @apply bg-[#dce8cf] text-moss ring-1 ring-inset ring-[#a4ba8d] hover:bg-[#d1e0c1]; }
   .lfo-pad { @apply block h-20 w-full rounded-lg border border-line bg-[#f7f9f4]; touch-action: none; cursor: crosshair; }
   .lfo-pad:focus-visible { outline: 2px solid #355a36; outline-offset: 3px; }
 }
@@ -38,13 +38,13 @@ input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; backgro
 input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: #759457; }
 input[type="range"]::-moz-range-thumb { width: 9px; height: 9px; border: 3px solid white; border-radius: 50%; background: #608041; box-shadow: 0 0 0 1px #a9bd96; }
 input[type="range"]:focus-visible { outline: 2px solid #355a36; outline-offset: 3px; border-radius: 6px; }
-button:enabled:active {
+button:enabled:active, button.keyboard-pressed {
   background-color: #fff0dc;
   border-color: #f07812;
   color: #a84f0a;
   box-shadow: 0 0 6px 1px #f0781266;
 }
-button.button-primary:enabled:active, button.repeat-button.selected:enabled:active {
+button.button-primary:enabled:active, button.button-primary.keyboard-pressed, button.repeat-button.selected:enabled:active {
   background-color: #b9580d;
   color: white;
 }

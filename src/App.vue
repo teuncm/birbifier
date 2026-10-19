@@ -15,6 +15,7 @@ import { useBirdReflection } from './useBirdReflection.js'
 const initialPresetIndex = Math.floor(Math.random() * presets.length)
 const settings = reactive({ ...presets[initialPresetIndex].settings })
 const mainBird = ref(null)
+const presetSelector = ref(null)
 const reflection = useBirdReflection(settings, mainBird)
 const locks = reactive(Object.fromEntries(Object.keys(defaultSettings).map(key => [key, false])))
 const allLocked = computed(() => Object.values(locks).every(Boolean))
@@ -29,6 +30,11 @@ const waiting = ref(false)
 const lastPresetIndex = ref(initialPresetIndex)
 const error = ref('')
 const exporting = ref(false)
+const downloadButton = ref(null)
+const downloadPressed = ref(false)
+const playPressed = ref(false)
+let downloadPressTimer
+let playPressTimer
 const playback = shallowRef(null)
 const bars = shallowRef([])
 const previewBusy = ref(false)
@@ -102,11 +108,32 @@ function playOscillator() {
   })
 }
 function togglePlayback() {
+  clearTimeout(playPressTimer)
+  playPressed.value = true
+  playPressTimer = setTimeout(() => { playPressed.value = false }, 250)
   if (playing.value || starting.value) return stop()
   return startPlayback()
 }
 function playbackShortcut(event) {
-  if (event.code !== 'Space' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return
+  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return
+  if (event.key === 'ArrowDown') {
+    if (event.target.closest?.('input, select, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"], .lfo-pad')) return
+    event.preventDefault()
+    if (!event.repeat && !exporting.value) {
+      clearTimeout(downloadPressTimer)
+      downloadPressed.value = true
+      downloadButton.value?.click()
+      downloadPressTimer = setTimeout(() => { downloadPressed.value = false }, 250)
+    }
+    return
+  }
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    if (event.target.closest?.('input, select, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"], .lfo-pad')) return
+    event.preventDefault()
+    if (!event.repeat) presetSelector.value?.press(event.key === 'ArrowRight' ? 1 : -1)
+    return
+  }
+  if (event.code !== 'Space') return
   if (event.target.closest?.('button, input, select, textarea, a[href], [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return
   event.preventDefault()
   if (!event.repeat) void togglePlayback()
@@ -194,6 +221,8 @@ onMounted(() => {
   void updatePreview()
 })
 onBeforeUnmount(() => {
+  clearTimeout(downloadPressTimer)
+  clearTimeout(playPressTimer)
   window.removeEventListener('keydown', playbackShortcut)
   disposed = true
   previewVersion++
@@ -211,10 +240,8 @@ onBeforeUnmount(() => {
       </a>
     </header>
     <main class="py-4 lg:py-6" @pointerdown.capture="reflection.rememberControl" @keydown.capture="reflection.rememberControl" @input.capture="reflection.rememberControl" @change.capture="reflection.rememberControl">
-      <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 class="text-3xl font-semibold tracking-tight">Birdsong synthesizer</h1>
-        </div>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-3xl font-semibold tracking-tight">Birdsong synthesizer</h1>
         <div class="flex flex-wrap items-center gap-2">
           <button class="button-secondary" :disabled="allLocked" title="Randomize unlocked parameters" @click="randomize"><AppIcon name="dice" :size="16" />Randomize</button>
           <button class="button-secondary border-red-300 bg-red-50 text-red-700 hover:bg-red-100" @click="applyPreset(presets[0])"><AppIcon name="reset" :size="16" />Reset sound</button>
@@ -238,13 +265,12 @@ onBeforeUnmount(() => {
               </svg>
               <span v-if="!bars.length" class="absolute inset-0 flex items-center justify-center text-xs text-muted">{{ previewBusy ? 'Rendering…' : 'Preview unavailable' }}</span>
             </div>
-            <div class="mx-3 mt-2 flex justify-between font-mono text-[10px] text-muted "><span>0.00 s</span><span class="hidden sm:inline">{{ (settings.duration / 2).toFixed(2) }} s</span><span>{{ settings.duration.toFixed(2) }} s</span></div>
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line bg-[#fcfdf9] px-3 py-3 ">
               <div class="flex flex-wrap items-center gap-2 lg:gap-3">
-                <button class="button-primary" :class="{ 'play-attention': playHint }" :disabled="starting" :aria-label="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" :title="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" @animationend="playHint = false" @click="togglePlayback"><AppIcon :name="playing ? 'stop' : 'play'" :size="18" /></button>
+                <button class="button-primary" :class="{ 'play-attention': playHint, 'keyboard-pressed': playPressed }" :disabled="starting" :aria-label="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" :title="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" @animationend="playHint = false" @click="togglePlayback"><AppIcon :name="playing ? 'stop' : 'play'" :size="18" /></button>
                 <button class="repeat-button px-4" :class="{ selected: loop, 'repeat-glow': repeatGlow }" :aria-pressed="loop" aria-label="Repeat song" :title="loop ? 'Repeat on' : 'Repeat off'" @animationend="repeatGlow = false" @click="loop = !loop"><AppIcon name="repeat" :size="18" /></button>
-                <button class="repeat-button px-4" :disabled="exporting" :aria-busy="exporting" aria-label="Download (WAV)" :title="exporting ? 'Saving…' : 'Download (WAV)'" @click="download"><AppIcon name="download" :size="18" /></button>
+                <button ref="downloadButton" class="repeat-button px-4" :class="{ 'keyboard-pressed': downloadPressed }" :disabled="exporting" :aria-busy="exporting" aria-label="Download (WAV)" :title="exporting ? 'Saving…' : 'Download (WAV)'" @click="download"><AppIcon name="download" :size="18" /></button>
               </div>
               <span class="flex items-center gap-2 text-xs text-muted" role="status" aria-label="Playback status"><span class="h-1.5 w-1.5 rounded-full" :class="playing ? 'bg-moss' : 'bg-[#9ba88f]'"></span>{{ waiting ? 'Pause' : playing ? 'Playing' : 'Ready' }}</span>
             </div>
@@ -284,7 +310,7 @@ onBeforeUnmount(() => {
             </div>
           </section>
         </div>
-        <PresetSelector class="col-start-2 row-start-1" v-model="activePreset" :presets="presets" @previous="browsePreset(-1)" @next="browsePreset(1)" />
+        <PresetSelector ref="presetSelector" class="col-start-2 row-start-1" v-model="activePreset" :presets="presets" @previous="browsePreset(-1)" @next="browsePreset(1)" />
         <BirdPortrait ref="mainBird" class="col-start-1 row-start-1 lg:col-start-2 lg:row-start-2" :settings="settings" :singing="playing && !waiting" :repeat="loop" />
         <aside class="col-span-2 row-start-4 space-y-3 lg:col-span-1 lg:col-start-2 lg:row-start-3">
           <section class="panel space-y-2 p-3" aria-labelledby="master-heading">
