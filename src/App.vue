@@ -226,7 +226,7 @@ onBeforeUnmount(() => {
           <section class="panel col-span-2 row-start-2 overflow-hidden" aria-labelledby="preview-heading">
             <div class="min-w-0">
             <div class="flex items-center justify-between px-3 pt-1">
-              <h2 id="preview-heading" class="flex min-h-8 items-center gap-2 text-sm font-semibold leading-5"><AppIcon name="wave" :size="17" />Waveform</h2>
+              <h2 id="preview-heading" class="flex min-h-7 items-center gap-2 text-sm font-semibold leading-tight"><AppIcon name="wave" :size="17" />Waveform</h2>
             </div>
             <div class="relative mx-3 mt-2 h-24 overflow-hidden rounded-lg bg-[#f7f9f4] lg:h-28" :aria-busy="previewBusy">
               <svg viewBox="0 0 720 144" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Waveform preview of the current song">
@@ -250,7 +250,7 @@ onBeforeUnmount(() => {
             </div>
           </section>
           <section class="panel col-span-2 row-start-3 p-3" aria-labelledby="synth-heading">
-            <h2 id="synth-heading" class="mb-3 text-sm font-semibold leading-5">Synth</h2>
+            <h2 id="synth-heading" class="mb-2 text-sm font-semibold leading-tight">Synth</h2>
             <div class="space-y-3">
             <ControlGroup id="wave-controls" title="Wave" :expanded="expanded.wave" @toggle="expanded.wave = !expanded.wave">
             <fieldset>
@@ -285,10 +285,10 @@ onBeforeUnmount(() => {
           </section>
         </div>
         <PresetSelector class="col-start-2 row-start-1" v-model="activePreset" :presets="presets" @previous="browsePreset(-1)" @next="browsePreset(1)" />
-        <BirdPortrait ref="mainBird" class="col-start-1 row-start-1 lg:col-start-2 lg:row-start-2" :settings="settings" :singing="playing && !waiting" />
+        <BirdPortrait ref="mainBird" class="col-start-1 row-start-1 lg:col-start-2 lg:row-start-2" :settings="settings" :singing="playing && !waiting" :repeat="loop" />
         <aside class="col-span-2 row-start-4 space-y-3 lg:col-span-1 lg:col-start-2 lg:row-start-3">
-          <section class="panel space-y-3 p-3" aria-labelledby="master-heading">
-          <h2 id="master-heading" class="text-sm font-semibold leading-5">Master</h2>
+          <section class="panel space-y-2 p-3" aria-labelledby="master-heading">
+          <h2 id="master-heading" class="text-sm font-semibold leading-tight">Master</h2>
           <ControlGroup id="filter-controls" title="Low-pass filter" icon="filter" caption="Global" :expanded="expanded.filter" @toggle="expanded.filter = !expanded.filter">
             <RangeControl id="cutoff" v-model="settings.cutoff" label="Cutoff" :min="200" :max="20000" :step="100" unit="Hz" min-label="200 Hz" max-label="20 kHz" :locked="locks.cutoff" :expanded="expanded.filter" @toggle-lock="locks.cutoff = !locks.cutoff" />
           </ControlGroup>
@@ -307,7 +307,7 @@ onBeforeUnmount(() => {
     </main>
     <Teleport to="body">
         <div v-if="reflection.visible.value" class="bird-reflection pointer-events-none fixed z-50 flex items-center justify-center rounded-full border border-line bg-white/90 p-1 shadow-lg" :style="reflection.style.value" aria-hidden="true">
-          <BirdPortrait ghost class="w-full opacity-80" :settings="settings" :singing="playing && !waiting" />
+          <BirdPortrait ghost class="w-full opacity-80" :settings="settings" :singing="playing && !waiting" :repeat="loop" />
         </div>
     </Teleport>
   </div>

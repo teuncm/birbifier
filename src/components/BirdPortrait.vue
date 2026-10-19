@@ -2,7 +2,7 @@
 import { computed, ref, useId } from 'vue'
 import AppIcon from './AppIcon.vue'
 
-const props = defineProps({ settings: { type: Object, required: true }, singing: Boolean, ghost: Boolean })
+const props = defineProps({ settings: { type: Object, required: true }, singing: Boolean, ghost: Boolean, repeat: Boolean })
 const headingId = useId()
 const clipId = useId()
 const portrait = ref(null)
@@ -17,9 +17,17 @@ const bird = computed(() => {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
     return seed / 4294967296
   }
-  const hue = Math.round(25 + (s.frequency - 100) / 7900 * 290)
-  const saturation = 30 + s.cutoff / 20000 * 40
-  const radius = 48 + s.amplitude * 11 + (s.duration - 0.5) / 1.5 * 7.5
+  const hue = Math.round(25 + (s.frequency - 100) / 7900 * 310)
+  const saturation = 27 + s.cutoff / 20000 * 52
+  const radius = 41 + s.amplitude * 28
+  const headScale = 0.72 + (s.duration - 0.5) / 1.5 * 0.56
+  const tail = 24 + s.vibratoDepth / 1200 * 46
+  const beak = 25 + s.pause * 24
+  const lift = s.tremoloDepth * 24
+  // Keep exaggerated crests, beaks, and long tails inside the portrait.
+  const left = Math.min(12, 94 - tail - 8)
+  const top = Math.min(8, 104 - 84 * headScale - lift - 5)
+  const right = Math.max(288, 186 + (33 + beak) * headScale + 8)
   const bodyPath = s.shape === 'sine'
     ? `M${152 - radius} 145a${radius} ${radius} 0 1 0 ${radius * 2} 0a${radius} ${radius} 0 1 0 ${-radius * 2} 0Z`
     : s.shape === 'square'
@@ -27,20 +35,22 @@ const bird = computed(() => {
       : `M152 ${145 - radius}L${152 + radius} ${145 + radius}H${152 - radius}Z`
   return {
     bodyPath,
+    headScale,
+    viewBox: `${left} ${top} ${right - left} ${240 - top}`,
     body: `hsl(${hue} ${saturation}% 55%)`,
     wing: `hsl(${hue + 18} ${saturation}% 34%)`,
     belly: `hsl(${hue - 12} 55% 85%)`,
     accent: `hsl(${hue + 155} 65% 60%)`,
-    width: 48 + s.amplitude * 22,
-    height: 48 + (s.duration - 0.5) / 1.5 * 15,
-    tail: 28 + s.vibratoDepth / 1200 * 40,
-    crest: 7 + s.vibratoSpeed / 40 * 23,
-    spread: 3 + s.tremoloSpeed / 30 * 25,
-    beak: 26 + s.pause * 18,
-    lift: s.tremoloDepth * 18,
-    feathers: 3 + Math.round(s.tremoloSpeed / 30 * 5),
-    spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 9) }, () => ({
-      x: 128 + random() * 35, y: 136 + random() * 36, r: 1.5 + random() * 2,
+    width: radius,
+    height: radius,
+    tail,
+    crest: 8 + s.vibratoSpeed / 40 * 26,
+    spread: 5 + s.tremoloSpeed / 30 * 32,
+    beak,
+    lift,
+    feathers: 3 + Math.round(s.tremoloSpeed / 30 * 6),
+    spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 10) }, () => ({
+      x: 128 + random() * 35, y: 136 + random() * 36, r: 1.5 + random() * 2.5,
     })),
     beat: `${0.5 / Math.max(2, Math.min(20, s.vibratoSpeed))}s`,
   }
@@ -62,15 +72,15 @@ function downloadBird() {
 
 <template>
   <section :class="ghost ? 'overflow-hidden' : 'panel overflow-hidden'" :aria-labelledby="ghost ? undefined : headingId">
-    <div v-if="!ghost" class="flex min-h-8 items-center justify-between gap-2 px-3 pt-1">
-      <h2 :id="headingId" class="text-sm font-semibold leading-5">Your bird</h2>
-      <button class="icon-button h-8 w-8 border-0" aria-label="Download bird SVG" title="Download bird SVG" @click="downloadBird"><AppIcon name="download" :size="16" /></button>
+    <div v-if="!ghost" class="flex min-h-7 items-center justify-between gap-2 px-2 pt-1">
+      <h2 :id="headingId" class="text-sm font-semibold leading-tight">Your bird</h2>
+      <button class="icon-button h-7 w-7 border-0" aria-label="Download bird SVG" title="Download bird SVG" @click="downloadBird"><AppIcon name="download" :size="16" /></button>
     </div>
-    <svg ref="portrait" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" class="block w-full" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing">
+    <svg ref="portrait" xmlns="http://www.w3.org/2000/svg" :viewBox="bird.viewBox" class="block w-full" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing">
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
       <ellipse cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
       <g stroke="#665541" stroke-width="4" stroke-linecap="round" fill="none">
-        <path :d="`M143 ${192 - bird.lift}V220m-8 3 8-3 9 3M172 ${192 - bird.lift}V220m-8 3 8-3 9 3`" />
+        <path :d="`M143 ${150 - bird.lift}V220m-8 3 8-3 9 3M172 ${150 - bird.lift}V220m-8 3 8-3 9 3`" />
       </g>
       <g :transform="`translate(0 ${-bird.lift})`">
       <g data-body>
@@ -86,6 +96,7 @@ function downloadBird() {
       <path v-for="i in bird.feathers" :key="i" :d="`M${114 + i * 5} 149q14 9 4 21`" fill="none" :stroke="bird.body" stroke-width="2" stroke-linecap="round" />
       </g>
       </g>
+      <g data-head :transform="`translate(186 104) scale(${bird.headScale}) translate(-186 -104)`">
       <g data-crest :fill="bird.wing">
         <path :transform="`rotate(${-bird.spread} 180 84)`" :d="`M174 86Q162 ${68 - bird.crest} 174 ${60 - bird.crest}Q185 ${66 - bird.crest} 185 88Z`" />
         <path :transform="`rotate(${bird.spread} 184 84)`" :d="`M180 88Q181 ${62 - bird.crest} 194 ${60 - bird.crest}Q199 66 190 88Z`" />
@@ -95,14 +106,15 @@ function downloadBird() {
       <circle cx="202" cy="99" r="6" fill="#293327" />
       <circle cx="204" cy="97" r="2" fill="white" />
       <ellipse cx="199" cy="120" rx="7" ry="4" :fill="bird.accent" />
+      <circle v-if="repeat" data-face-mark cx="189" cy="112" r="1.5" :fill="bird.wing" opacity="0.65" />
       <path :d="`M219 104l${bird.beak} 11-${bird.beak} 5Z`" fill="#dc9c3b" />
       <g data-beak :style="singing ? { transformOrigin: '219px 120px', animation: `bird-chirp ${bird.beat} ease-in-out infinite alternate` } : undefined">
         <path :d="`M219 120l${bird.beak} -5-${bird.beak} 17Z`" fill="#bf792d" />
       </g>
       </g>
       </g>
+      </g>
     </svg>
-    <p v-if="!ghost" class="hidden px-3 pb-3 text-xs text-muted lg:block">Shaped by your sound.</p>
   </section>
 </template>
 

@@ -24,7 +24,7 @@
   .shape-button.selected { @apply border-[#7d9e60] bg-sage font-semibold text-moss; }
   .value-readout { @apply rounded-md bg-[#f0f4e9] px-2 py-1 font-mono text-xs text-[#465b39]; }
   .control-group { @apply overflow-hidden rounded-lg border border-line bg-white; }
-  .group-toggle { @apply flex min-h-11 w-full items-center justify-between gap-2 border-b border-line bg-[#f0f4e9] px-3 py-2 text-left text-sm font-semibold text-moss hover:bg-sage; }
+  .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line bg-[#f0f4e9] px-3 py-1 text-left text-sm font-semibold text-moss hover:bg-sage; }
   .preset-select { @apply min-h-11 w-full cursor-pointer rounded-lg border border-[#b8cba8] bg-sage px-3 text-sm font-medium text-moss; }
   .parameter-lock { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-sage; }
   .parameter-lock.selected { @apply bg-sage text-moss; }
