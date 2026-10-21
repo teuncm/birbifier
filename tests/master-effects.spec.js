@@ -25,14 +25,14 @@ test('Download exports exactly the current wet render including master effects',
   expect(hash.digest('hex')).toBe(expectedHash)
 })
 
-test('chorus is 30% and locked on every preset, with a 50% upper limit', async ({ page }) => {
+test('chorus is 30% and locked on every preset, with a 0–100% range', async ({ page }) => {
   await page.addInitScript(() => { Math.random = () => 0.8 })
   await page.goto('/')
   expect(await page.evaluate(async () => (await import('/src/audio.js')).presets.every(preset => preset.settings.chorus === 0.3))).toBe(true)
   const chorus = page.locator('#chorus')
   await expect(chorus).toHaveValue('0.3')
-  await expect(chorus).toHaveAttribute('min', '0.3')
-  await expect(chorus).toHaveAttribute('max', '0.5')
+  await expect(chorus).toHaveAttribute('min', '0')
+  await expect(chorus).toHaveAttribute('max', '1')
   await expect(page.locator('#cutoff')).toHaveAttribute('max', '15000')
   expect(await page.evaluate(async () => (await import('/src/audio.js')).presets.every(preset => preset.settings.cutoff <= 15000))).toBe(true)
   await expect(page.getByRole('button', { name: 'Unlock Chorus', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -40,12 +40,12 @@ test('chorus is 30% and locked on every preset, with a 50% upper limit', async (
   await expect(chorus).toHaveValue('0.3')
   await page.getByRole('button', { name: 'Unlock Chorus', exact: true }).click()
   await page.getByRole('button', { name: 'Randomize', exact: true }).click()
-  await expect(chorus).toHaveValue('0.46')
-  await page.getByRole('combobox', { name: 'Presets' }).selectOption('Little chirp')
+  await expect(chorus).toHaveValue('0.8')
+  await page.getByRole('combobox', { name: 'Presets' }).selectOption('001 Little chirp')
   await expect(chorus).toHaveValue('0.3')
   await expect(page.getByRole('button', { name: 'Unlock Chorus', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await chorus.evaluate(input => { input.value = 0.5; input.dispatchEvent(new Event('input', { bubbles: true })) })
-  await expect(chorus).toHaveValue('0.5')
+  await chorus.evaluate(input => { input.value = 1; input.dispatchEvent(new Event('input', { bubbles: true })) })
+  await expect(chorus).toHaveValue('1')
 })
 
 test('stereo WAV includes the short chorus tail with correctly interleaved channels', async ({ page }) => {
@@ -83,13 +83,16 @@ test('chorus widens the stereo image and can be bypassed', async ({ page }) => {
       return {
         difference: Math.sqrt(left.reduce((sum, value, i) => sum + (value - right[i]) ** 2, 0) / left.length),
         peak: Math.max(...[left, right].map(samples => samples.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0))),
+        earlyPeak: Math.max(...left.slice(0, 441).map(Math.abs)),
         duration: buffer.duration,
       }
     }
-    return { dry: await compare(0), chorus: await compare(0.5) }
+    return { dry: await compare(0), chorus: await compare(1) }
   })
   expect(result.dry.difference).toBe(0)
   expect(result.dry.duration).toBe(0.5)
+  expect(result.dry.earlyPeak).toBeGreaterThan(0.001)
+  expect(result.chorus.earlyPeak).toBeLessThan(0.00001)
   expect(result.chorus.difference).toBeGreaterThan(0.002)
   expect(result.chorus.duration).toBeCloseTo(0.54, 4)
   expect(result.chorus.peak).toBeLessThanOrEqual(0.250001)

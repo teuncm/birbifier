@@ -10,7 +10,7 @@
   <g font-family="Segoe UI, system-ui, sans-serif">
     <text x="130" y="213" font-size="76" font-weight="700" fill="#293327">Birbifier</text>
     <text x="133" y="275" font-size="32" fill="#4d6041">Birdsong synthesizer</text>
-    <text x="133" y="330" font-size="23" fill="#737c6d">50 presets · WAV export · SVG birds</text>
+    <text x="133" y="330" font-size="23" fill="#737c6d">100 presets · WAV export · SVG birds</text>
     <text x="133" y="510" font-size="21" fill="#355a36">By Teun M. · teuncm.nl/birbifier</text>
   </g>
   <path d="M133 415h48l8-15 8 30 8-51 8 72 8-88 8 105 8-120 8 132 8-138 8 140 8-132 8 116 8-99 8 80 8-61 8 43 8-26 8 13h38l8-20 8 40 8-59 8 76 8-88 8 95 8-94 8 84 8-67 8 45 8-22h42l8-13 8 25 8-34 8 39 8-35 8 24 8-12h316" fill="none" stroke="#7f9c61" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>

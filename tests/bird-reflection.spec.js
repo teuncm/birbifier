@@ -10,6 +10,7 @@ async function change(page, id, value) {
 test('off-screen bird appears beside an edited control and follows current settings', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 740 })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   const main = page.getByRole('img', { name: 'Bird generated' })
   const ghost = page.locator('.bird-reflection')
   await page.locator('#duration').scrollIntoViewIfNeeded()

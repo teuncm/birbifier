@@ -19,7 +19,7 @@ test('Randomize always starts or restarts, and Reset always stops', async ({ pag
   await expect.poll(() => page.evaluate(() => window.voiceCount)).toBe(6)
   await reset.click()
   await expect(status).toHaveText('Ready')
-  await expect(page.locator('#frequency')).toHaveValue('2400')
+  await expect(page.locator('#frequency')).toHaveAttribute('aria-valuenow', '2400')
   await expect(page.getByRole('button', { name: 'Repeat song', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await randomize.click()
   await expect.poll(() => page.evaluate(() => window.voiceCount)).toBe(9)
@@ -34,9 +34,9 @@ test('Randomize always starts or restarts, and Reset always stops', async ({ pag
 
 test('limits and concise labels apply to controls, presets, and randomization', async ({ page }) => {
   await page.goto('/')
-  for (const [id, min, max, label] of [['frequency', '300', '8000', 'Frequency'], ['amplitude', String(10 ** (-10 / 20)), '1', 'Amplitude'], ['vibrato-frequency', '0', '30', 'Frequency'], ['tremolo-frequency', '0', '30', 'Frequency'], ['duration', '0.5', '2', 'Duration'], ['pause', '0', '1', 'Pause']]) {
-    await expect(page.locator(`#${id}`)).toHaveAttribute('min', min)
-    await expect(page.locator(`#${id}`)).toHaveAttribute('max', max)
+  for (const [id, min, max, label] of [['frequency', '250', '8000', 'Frequency'], ['amplitude', String(10 ** (-10 / 20)), '1', 'Amplitude'], ['vibrato-frequency', '0', '30', 'Frequency'], ['tremolo-frequency', '0', '30', 'Frequency'], ['duration', '0.5', '2', 'Duration'], ['pause', '0', '1', 'Pause']]) {
+    await expect(page.locator(`#${id}`)).toHaveAttribute('aria-valuemin', min)
+    await expect(page.locator(`#${id}`)).toHaveAttribute('aria-valuemax', max)
     await expect(page.locator(`#${id}-label`)).toHaveText(label)
   }
   await expect(page.getByText('Applies to the next play.', { exact: true })).toHaveCount(0)
@@ -45,7 +45,7 @@ test('limits and concise labels apply to controls, presets, and randomization', 
     const { presets, defaultSettings } = await import('/src/audio.js')
     const { randomizeSettings } = await import('/src/randomize.js')
     return [...presets.map(preset => preset.settings), randomizeSettings(defaultSettings, {}, () => 0), randomizeSettings(defaultSettings, {}, () => 0.9999)]
-      .every(s => s.frequency >= 300 && s.amplitude >= 10 ** (-10 / 20) && s.vibratoFrequency <= 30 && s.tremoloFrequency <= 30)
+      .every(s => s.frequency >= 250 && s.amplitude >= 10 ** (-10 / 20) && s.vibratoFrequency <= 30 && s.tremoloFrequency <= 30)
   })
   expect(valid).toBe(true)
 })
@@ -61,14 +61,14 @@ for (const action of ['Preset']) {
     })
     await page.goto('/')
     const changeSound = () => action === 'Preset'
-      ? page.getByRole('combobox', { name: 'Presets' }).selectOption('Little chirp')
+      ? page.getByRole('combobox', { name: 'Presets' }).selectOption('001 Little chirp')
       : page.getByRole('button', { name: action === 'Reset' ? 'Reset' : 'Randomize', exact: true }).click()
     const status = page.getByRole('status', { name: 'Playback status' })
     const repeat = page.getByRole('button', { name: 'Repeat song', exact: true })
     await changeSound()
     await expect(status).toHaveText('Ready')
     expect(await page.evaluate(() => window.voiceCount)).toBe(0)
-    await page.getByRole('combobox', { name: 'Presets' }).selectOption('Night song')
+    await page.getByRole('combobox', { name: 'Presets' }).selectOption('025 Night song')
     await page.getByRole('button', { name: 'Play song', exact: true }).click()
     await page.waitForFunction(() => Number(document.querySelector('line[data-playback-cursor]')?.getAttribute('x1')) > 60)
     await changeSound()

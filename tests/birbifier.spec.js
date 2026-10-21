@@ -24,14 +24,14 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   await setSlider(page, 'amplitude', 1)
   await expect(page.locator('[data-parameter="amplitude"]')).toHaveText('0 dB')
   const presetSelect = page.getByRole('combobox', { name: 'Presets' })
-  await expect(presetSelect.locator('option:not([disabled])')).toHaveCount(50)
+  await expect(presetSelect.locator('option:not([disabled])')).toHaveCount(100)
   await expect(presetSelect).toHaveValue('')
   await expect(presetSelect.locator('option:checked')).toHaveText('Custom')
-  await presetSelect.selectOption('Soft coo')
-  await expect(page.locator('#frequency')).toHaveValue('480')
+  await presetSelect.selectOption('003 Soft coo')
+  await expect(page.locator('#frequency')).toHaveAttribute('aria-valuenow', '480')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
-  await expect(page.locator('#frequency')).toHaveValue('2400')
-  await expect(presetSelect).toHaveValue('Little chirp')
+  await expect(page.locator('#frequency')).toHaveAttribute('aria-valuenow', '2400')
+  await expect(presetSelect).toHaveValue('001 Little chirp')
   const pendingDownload = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download (WAV)', exact: true }).click()
   const download = await pendingDownload
@@ -75,7 +75,7 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   await expect(page.locator('#tremolo-controls input')).toHaveCount(2)
   await waveToggle.click()
   await expect(waveToggle).toHaveAttribute('aria-expanded', 'true')
-  await expect(page.locator('#frequency')).toHaveValue('2400')
+  await expect(page.locator('#frequency')).toHaveAttribute('aria-valuenow', '2400')
   expect(errors).toEqual([])
 })
 
@@ -195,7 +195,7 @@ test('randomization respects each parameter lock and the duration bounds', async
   ]
   const values = () => page.evaluate(() => ({
     shape: document.querySelector('.shape-button.selected').textContent.trim(),
-    ...Object.fromEntries([...document.querySelectorAll('input[type="range"]')].map(input => [input.id.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), Number(input.value)])),
+    ...Object.fromEntries([...document.querySelectorAll('input[type="range"]')].map(input => [input.id.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), Number(input.getAttribute('aria-valuenow'))])),
   }))
   const defaults = await values()
   await expect(page.locator('#duration')).toHaveAttribute('min', '0.5')
@@ -213,7 +213,7 @@ test('randomization respects each parameter lock and the duration bounds', async
   for (const [, label] of parameters) await page.getByRole('button', { name: `Lock ${label}`, exact: true }).click()
   await expect(page.getByRole('button', { name: 'Randomize', exact: true })).toBeDisabled()
   await setSlider(page, 'frequency', 1000)
-  await expect(page.locator('#frequency')).toHaveValue('1000')
+  await expect(page.locator('#frequency')).toHaveAttribute('aria-valuenow', '1000')
   const boundaries = await page.evaluate(async () => {
     const { randomizeSettings } = await import('/src/randomize.js')
     const { defaultSettings } = await import('/src/audio.js')

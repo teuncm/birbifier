@@ -4,6 +4,7 @@
   --color-sage: var(--selected);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
   --color-surface: var(--surface);
   --color-inset: var(--inset);
   --color-raised: var(--raised);
@@ -12,23 +13,24 @@
 :root {
   color-scheme: dark;
   --canvas: #191a1b;
-  --surface: #222425;
-  --raised: #292b2c;
+  --surface: #262829;
+  --raised: #2e3132;
   --inset: #1c1e1f;
   --text: #e0e1dc;
-  --muted: #a9ada6;
+  --muted: #bac0b5;
   --accent: #a4c98a;
-  --selected: #30362f;
+  --selected: #373e35;
   --hover: #3a4137;
-  --line: #3e4240;
-  --line-strong: #697461;
-  --track: #424740;
+  --line: #535954;
+  --line-subtle: #3b3f3c;
+  --line-strong: #7b886f;
+  --track: #555e4f;
   --action: #9abd80;
   --action-hover: #b0cf99;
   --action-pulse: #74995e;
   --on-action: #172313;
-  --grid: #303534;
-  --axis: #65705e;
+  --grid: #3b423e;
+  --axis: #7b886f;
   --feedback-surface: #473320;
   --feedback-text: #ffbc7e;
   --danger-surface: #342622;
@@ -48,6 +50,7 @@
   --selected: #d5dfc8;
   --hover: #cbd8bc;
   --line: #c1cbb4;
+  --line-subtle: #d0d7c5;
   --line-strong: #93aa7c;
   --track: #c4cfb9;
   --action: #3f6337;
@@ -75,7 +78,7 @@
   button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 }
 @layer components {
-  .panel { @apply rounded-xl border border-line bg-surface; box-shadow: 0 2px 4px #29332703; }
+  .panel { @apply rounded-xl border border-line-subtle bg-surface; }
   .button-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[var(--action)] px-4 text-sm font-medium text-[var(--on-action)] hover:bg-[var(--action-hover)]; }
   .button-secondary { @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3.5 text-xs font-medium hover:bg-sage; }
   .icon-button { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:bg-sage; }
@@ -84,8 +87,8 @@
   .shape-button { @apply flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border border-line bg-[var(--raised)] text-xs text-muted hover:border-[var(--accent)]; }
   .shape-button.selected { @apply border-[var(--accent)] bg-sage font-semibold text-moss; }
   .value-readout { @apply rounded-md bg-[var(--selected)] px-2 py-1 font-mono text-xs text-[var(--accent)]; }
-  .control-group { @apply overflow-hidden rounded-lg border border-line bg-surface; }
-  .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line bg-[var(--selected)] px-2 py-1 text-left text-sm font-semibold text-moss hover:bg-sage sm:px-3; }
+  .control-group { @apply overflow-hidden rounded-lg border border-line-subtle bg-surface; }
+  .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line-subtle bg-[var(--selected)] px-2 py-1 text-left text-sm font-semibold text-moss hover:bg-sage sm:px-3; }
   .preset-select { @apply min-h-10 w-full cursor-pointer rounded-lg border border-[var(--line-strong)] bg-sage px-3 text-sm font-medium text-moss; }
   .parameter-lock { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-sage; }
   .parameter-lock.selected { @apply bg-[var(--selected)] text-moss ring-1 ring-inset ring-[var(--line-strong)] hover:bg-[var(--hover)]; }
@@ -99,29 +102,32 @@ input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; backgro
 input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--accent); }
 input[type="range"]::-moz-range-thumb { width: 9px; height: 9px; border: 3px solid var(--surface); border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1px var(--line-strong); }
 input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
-button:enabled:active, button.keyboard-pressed {
+button:is(:enabled:active, .keyboard-pressed, .is-interacting) {
   background-color: var(--feedback-surface);
   border-color: #f07812;
   color: var(--feedback-text);
   box-shadow: 0 0 6px 1px #f0781266;
+  animation: none !important;
+  transition: none;
 }
-button.button-primary:enabled:active, button.button-primary.keyboard-pressed, button.repeat-button.selected:enabled:active {
+button.button-primary:is(:enabled:active, .keyboard-pressed, .is-interacting),
+button.repeat-button.selected:is(:enabled:active, .keyboard-pressed, .is-interacting) {
   background-color: #b9580d;
   color: white;
 }
-input[type="range"]:active::-webkit-slider-runnable-track {
+input[type="range"]:is(:active, .is-interacting)::-webkit-slider-runnable-track {
   background: linear-gradient(to right, #f07812 var(--fill), var(--track) var(--fill));
 }
-input[type="range"]:active::-webkit-slider-thumb {
+input[type="range"]:is(:active, .is-interacting)::-webkit-slider-thumb {
   background: #f07812;
   box-shadow: 0 0 0 1px #d56a0c, 0 0 8px 2px #f0781273;
 }
-input[type="range"]:active::-moz-range-progress { background: #f07812; }
-input[type="range"]:active::-moz-range-thumb {
+input[type="range"]:is(:active, .is-interacting)::-moz-range-progress { background: #f07812; }
+input[type="range"]:is(:active, .is-interacting)::-moz-range-thumb {
   background: #f07812;
   box-shadow: 0 0 0 1px #d56a0c, 0 0 8px 2px #f0781273;
 }
-.range-control:has(input[type="range"]:active) .value-readout,
+.range-control:has(input[type="range"]:is(:active, .is-interacting)) .value-readout,
 .control-group:has(.lfo-surface.is-dragging) .value-readout {
   background-color: var(--feedback-surface);
   color: var(--feedback-text);
@@ -143,8 +149,7 @@ input[type="range"]:active::-moz-range-thumb {
 @media (hover: hover) {
   .lfo-surface:hover .lfo-dot { animation: lfo-hover 1s ease-in-out infinite; }
 }
-.lfo-surface.is-dragging .lfo-dot,
-.control-group:has(input[type="range"]:active) .lfo-dot {
+.lfo-surface.is-dragging .lfo-dot {
   background-color: #f07812;
   border-color: var(--feedback-surface);
   animation: lfo-drag 350ms ease-in-out infinite alternate;
@@ -174,8 +179,7 @@ input[type="range"]:active::-moz-range-thumb {
   .bird-reflection { animation: none; }
   .repeat-button.selected, .repeat-button.selected.repeat-glow { animation: none; }
   .lfo-surface .lfo-dot, .lfo-surface:hover .lfo-dot { animation: none; }
-  .lfo-surface.is-dragging .lfo-dot,
-  .control-group:has(input[type="range"]:active) .lfo-dot {
+  .lfo-surface.is-dragging .lfo-dot {
     animation: none;
     box-shadow: 0 0 6px 2px #f0781299;
   }

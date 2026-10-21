@@ -9,6 +9,7 @@ test('bird drags outside its card and glides home without moving the layout', as
   const y = original.y + original.height / 2
   await page.mouse.move(x, y)
   await page.mouse.down()
+  await expect(bird.locator('[data-ground]')).toHaveCSS('visibility', 'hidden')
   await page.mouse.move(x + 90, y + 90)
   await expect(bird.locator('[data-facing]')).toHaveAttribute('transform', /scale\(-1 1\)/)
   await page.mouse.move(x - 240, y + 90, { steps: 5 })
@@ -26,6 +27,10 @@ test('bird drags outside its card and glides home without moving the layout', as
   await expect(bird.locator('[data-wing]')).toHaveCSS('animation-name', 'bird-flight-flap')
   await expect(bird.locator('[data-wing]').locator('..')).not.toHaveAttribute('clip-path')
   const path = await bird.evaluate(async svg => {
+    const frame = svg.parentElement
+    const originalMeasure = frame.getBoundingClientRect.bind(frame)
+    let layoutReads = 0
+    frame.getBoundingClientRect = () => { layoutReads++; return originalMeasure() }
     const started = performance.now()
     const points = []
     let maxFeathers = 0
@@ -35,11 +40,14 @@ test('bird drags outside its card and glides home without moving the layout', as
       points.push({ x: rect.x, y: rect.y })
       await new Promise(requestAnimationFrame)
     }
-    return { points, maxFeathers, elapsed: performance.now() - started }
+    delete frame.getBoundingClientRect
+    return { points, maxFeathers, layoutReads, elapsed: performance.now() - started }
   })
   expect(path.elapsed).toBeGreaterThan(1400)
   expect(path.maxFeathers).toBeGreaterThan(3)
   expect(path.maxFeathers).toBeLessThanOrEqual(16)
+  expect(path.points.length).toBeGreaterThan(20)
+  expect(path.layoutReads).toBeLessThan(12)
   const lineDistance = point => Math.abs(90 * (point.x - moved.x) + 240 * (point.y - moved.y)) / Math.hypot(240, 90)
   expect(Math.max(...path.points.map(lineDistance))).toBeGreaterThan(5)
   await expect(bird).not.toHaveClass(/bird-returning/)
@@ -74,4 +82,44 @@ test('touch dragging and cancellation return the bird home on mobile', async ({ 
   expect((await bird.boundingBox()).y).toBeCloseTo(original.y, 1)
   expect(await page.evaluate(() => scrollY)).toBe(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('a quick release carries the bird in the throw direction before returning', async ({ page }) => {
+  await page.goto('/')
+  const bird = page.getByRole('img', { name: 'Bird generated' })
+  const home = await bird.boundingBox()
+  const x = home.x + home.width / 2, y = home.y + home.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  for (const offset of [60, 120, 180]) await page.mouse.move(x - offset, y)
+  const released = await bird.boundingBox()
+  await page.mouse.up()
+  await expect.poll(async () => (await bird.boundingBox()).x, { intervals: [16, 16, 32] }).toBeLessThan(released.x - 30)
+  await expect(bird).toHaveCSS('position', 'static')
+  expect((await bird.boundingBox()).x).toBeCloseTo(home.x, 1)
+})
+
+test('mobile scrolling during the return updates the landing position without a final jump', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/')
+  const bird = page.getByRole('img', { name: 'Bird generated' })
+  const original = await bird.boundingBox()
+  const x = original.x + original.width / 2, y = original.y + original.height / 2
+  const session = await page.context().newCDPSession(page)
+  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] })
+  await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + 100, y: y + 100 }] })
+  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  const landing = await bird.evaluate(async svg => {
+    window.scrollTo(0, 260)
+    let lastTop
+    while (svg.classList.contains('bird-returning')) {
+      lastTop = svg.getBoundingClientRect().top
+      await new Promise(requestAnimationFrame)
+    }
+    return { lastTop, finalTop: svg.getBoundingClientRect().top, homeTop: svg.parentElement.getBoundingClientRect().top, scroll: scrollY }
+  })
+  expect(landing.scroll).toBe(260)
+  expect(landing.finalTop).toBeCloseTo(original.y - 260, 1)
+  expect(Math.abs(landing.lastTop - landing.homeTop)).toBeLessThan(1)
+  expect(landing.finalTop).toBe(landing.homeTop)
 })

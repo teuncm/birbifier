@@ -61,7 +61,57 @@ export const presets = [
   { name: 'Flute call', settings: { ...defaultSettings, frequency: 880, amplitude: 0.37, vibratoFrequency: 5.5, vibratoDepth: 40, tremoloFrequency: 5.5, tremoloDepth: 0.1, duration: 1.8, cutoff: 4000, pause: 0.55 } },
   { name: 'Electric flock', settings: { ...defaultSettings, shape: 'square', frequency: 2400, amplitude: 0.45, vibratoFrequency: 12.7, vibratoDepth: 700, tremoloFrequency: 17.3, tremoloDepth: 0.8, duration: 2, cutoff: 7500, pause: 0.35 } },
   { name: 'Radio birb', settings: { ...defaultSettings, shape: 'square', frequency: 2050, amplitude: 0.48, vibratoFrequency: 30, vibratoDepth: 110, tremoloFrequency: 6, tremoloDepth: 0.95, duration: 1.05, cutoff: 4500, pause: 0.25 } },
-]
+  { name: 'Pygmy owl', settings: { ...defaultSettings, frequency: 250, amplitude: 0.49, vibratoFrequency: 0.8, vibratoDepth: 40, tremoloFrequency: 2, tremoloDepth: 0.85, duration: 1.5, cutoff: 750, pause: 0.75 } },
+  { name: 'Kingfisher flash', settings: { ...defaultSettings, frequency: 6400, amplitude: 0.42, vibratoFrequency: 21, vibratoDepth: 360, tremoloFrequency: 25, tremoloDepth: 0.8, duration: 0.5, cutoff: 11500, pause: 0.15 } },
+  { name: 'Reed flute', settings: { ...defaultSettings, frequency: 1320, amplitude: 0.41, vibratoFrequency: 4.5, vibratoDepth: 50, tremoloFrequency: 0.5, tremoloDepth: 0.2, duration: 1.85, cutoff: 3500, pause: 0.6 } },
+  { name: 'Acorn woodpecker', settings: { ...defaultSettings, shape: 'square', frequency: 620, amplitude: 0.49, vibratoFrequency: 0, vibratoDepth: 0, tremoloFrequency: 19, tremoloDepth: 1, duration: 0.65, cutoff: 1600, pause: 0.45 } },
+  { name: 'Prairie wobble', settings: { ...defaultSettings, frequency: 760, amplitude: 0.49, vibratoFrequency: 6.5, vibratoDepth: 950, tremoloFrequency: 3.2, tremoloDepth: 0.65, duration: 1.65, cutoff: 2600, pause: 0.35 } },
+  { name: 'Peacock trumpet', settings: { ...defaultSettings, shape: 'saw', frequency: 1450, amplitude: 0.66, vibratoFrequency: 1.8, vibratoDepth: 520, tremoloFrequency: 2.8, tremoloDepth: 0.45, duration: 1.9, cutoff: 4200, pause: 0.85 } },
+  { name: 'Snow bunting', settings: { ...defaultSettings, frequency: 5800, amplitude: 0.4, vibratoFrequency: 13, vibratoDepth: 150, tremoloFrequency: 11, tremoloDepth: 0.6, duration: 0.7, cutoff: 12000, pause: 0.3 } },
+  { name: 'Mangrove gargle', settings: { ...defaultSettings, shape: 'saw', frequency: 540, amplitude: 0.82, vibratoFrequency: 16, vibratoDepth: 850, tremoloFrequency: 7.5, tremoloDepth: 0.85, duration: 1.25, cutoff: 2000, pause: 0.4 } },
+  { name: 'Oriole ribbon', settings: { ...defaultSettings, frequency: 2200, amplitude: 0.41, vibratoFrequency: 3.3, vibratoDepth: 1150, tremoloFrequency: 1.7, tremoloDepth: 0.4, duration: 2, cutoff: 7500, pause: 0.65 } },
+  { name: 'Sedge warbler', settings: { ...defaultSettings, shape: 'square', frequency: 3050, amplitude: 0.42, vibratoFrequency: 23, vibratoDepth: 330, tremoloFrequency: 16, tremoloDepth: 0.75, duration: 1.55, cutoff: 5800, pause: 0.2 } },
+  { name: 'Raindrop peep', settings: { ...defaultSettings, frequency: 3900, amplitude: 0.49, vibratoFrequency: 1, vibratoDepth: 700, tremoloFrequency: 3.8, tremoloDepth: 1, duration: 0.55, cutoff: 9000, pause: 0.5 } },
+  { name: 'Cedar waxwing', settings: { ...defaultSettings, shape: 'saw', frequency: 7200, amplitude: 0.67, vibratoFrequency: 26, vibratoDepth: 70, tremoloFrequency: 28, tremoloDepth: 0.55, duration: 0.85, cutoff: 13500, pause: 0.25 } },
+  { name: 'Burrowing hoot', settings: { ...defaultSettings, frequency: 360, amplitude: 0.58, vibratoFrequency: 4, vibratoDepth: 280, tremoloFrequency: 4, tremoloDepth: 1, duration: 1, cutoff: 1100, pause: 0.6 } },
+  { name: 'Jungle squeaker', settings: { ...defaultSettings, shape: 'square', frequency: 1850, amplitude: 0.4, vibratoFrequency: 2.6, vibratoDepth: 1200, tremoloFrequency: 5.2, tremoloDepth: 0.6, duration: 1.35, cutoff: 4000, pause: 0.45 } },
+  { name: 'Willow lullaby', settings: { ...defaultSettings, frequency: 920, amplitude: 0.48, vibratoFrequency: 2.4, vibratoDepth: 110, tremoloFrequency: 0.6, tremoloDepth: 0.55, duration: 2, cutoff: 2600, pause: 1 } },
+  { name: 'Sandpiper sprint', settings: { ...defaultSettings, frequency: 4700, amplitude: 0.49, vibratoFrequency: 17, vibratoDepth: 480, tremoloFrequency: 23, tremoloDepth: 0.95, duration: 0.6, cutoff: 9500, pause: 0.1 } },
+  { name: 'Toucan croak', settings: { ...defaultSettings, shape: 'saw', frequency: 410, amplitude: 0.78, vibratoFrequency: 9, vibratoDepth: 390, tremoloFrequency: 5, tremoloDepth: 0.8, duration: 0.9, cutoff: 1350, pause: 0.55 } },
+  { name: 'Swifts at dusk', settings: { ...defaultSettings, frequency: 6600, amplitude: 0.37, vibratoFrequency: 7, vibratoDepth: 1000, tremoloFrequency: 12, tremoloDepth: 0.65, duration: 1.4, cutoff: 14000, pause: 0.3 } },
+  { name: 'Bittern bottle', settings: { ...defaultSettings, frequency: 280, amplitude: 0.56, vibratoFrequency: 0.3, vibratoDepth: 500, tremoloFrequency: 1.8, tremoloDepth: 1, duration: 1.8, cutoff: 650, pause: 0.9 } },
+  { name: 'Juniper jingle', settings: { ...defaultSettings, frequency: 3400, amplitude: 0.52, vibratoFrequency: 29, vibratoDepth: 80, tremoloFrequency: 7.2, tremoloDepth: 0.9, duration: 1.15, cutoff: 8500, pause: 0.35 } },
+  { name: 'Dewdrop modem', settings: { ...defaultSettings, shape: 'square', frequency: 1550, amplitude: 0.49, vibratoFrequency: 14.5, vibratoDepth: 1050, tremoloFrequency: 21.5, tremoloDepth: 1, duration: 0.95, cutoff: 4800, pause: 0.2 } },
+  { name: 'Orbiting owl', settings: { ...defaultSettings, frequency: 440, amplitude: 0.47, vibratoFrequency: 0.6, vibratoDepth: 1200, tremoloFrequency: 1.2, tremoloDepth: 0.7, duration: 2, cutoff: 1800, pause: 0.75 } },
+  { name: 'Laser lark', settings: { ...defaultSettings, shape: 'saw', frequency: 5200, amplitude: 0.6, vibratoFrequency: 4, vibratoDepth: 1200, tremoloFrequency: 8, tremoloDepth: 0.5, duration: 0.5, cutoff: 12500, pause: 0.15 } },
+  { name: 'Moss telephone', settings: { ...defaultSettings, shape: 'square', frequency: 980, amplitude: 0.49, vibratoFrequency: 24, vibratoDepth: 60, tremoloFrequency: 2.5, tremoloDepth: 1, duration: 1.6, cutoff: 2100, pause: 0.65 } },
+  { name: 'Crystal nest', settings: { ...defaultSettings, frequency: 7600, amplitude: 0.34, vibratoFrequency: 0.2, vibratoDepth: 150, tremoloFrequency: 1.3, tremoloDepth: 0.7, duration: 1.25, cutoff: 15000, pause: 0.8 } },
+  { name: 'Bubblegum gull', settings: { ...defaultSettings, frequency: 1150, amplitude: 0.55, vibratoFrequency: 4.8, vibratoDepth: 1200, tremoloFrequency: 9.6, tremoloDepth: 0.85, duration: 1.05, cutoff: 4400, pause: 0.25 } },
+  { name: 'Clockwork chick', settings: { ...defaultSettings, shape: 'square', frequency: 2650, amplitude: 0.48, vibratoFrequency: 10, vibratoDepth: 40, tremoloFrequency: 10, tremoloDepth: 1, duration: 0.8, cutoff: 5000, pause: 0.2 } },
+  { name: 'Amber reed', settings: { ...defaultSettings, shape: 'saw', frequency: 670, amplitude: 0.63, vibratoFrequency: 5.2, vibratoDepth: 100, tremoloFrequency: 1.1, tremoloDepth: 0.35, duration: 1.75, cutoff: 1700, pause: 0.7 } },
+  { name: 'Starlight shimmer', settings: { ...defaultSettings, frequency: 6100, amplitude: 0.43, vibratoFrequency: 30, vibratoDepth: 180, tremoloFrequency: 30, tremoloDepth: 0.8, duration: 1.65, cutoff: 13000, pause: 0.4 } },
+  { name: 'Alien duckling', settings: { ...defaultSettings, shape: 'saw', frequency: 880, amplitude: 0.87, vibratoFrequency: 11, vibratoDepth: 1100, tremoloFrequency: 5.5, tremoloDepth: 0.95, duration: 0.75, cutoff: 3000, pause: 0.35 } },
+  { name: 'Velcro wings', settings: { ...defaultSettings, shape: 'square', frequency: 380, amplitude: 0.52, vibratoFrequency: 30, vibratoDepth: 180, tremoloFrequency: 28, tremoloDepth: 1, duration: 1.2, cutoff: 1400, pause: 0.3 } },
+  { name: 'Singing satellite', settings: { ...defaultSettings, frequency: 4300, amplitude: 0.43, vibratoFrequency: 0.9, vibratoDepth: 1000, tremoloFrequency: 14, tremoloDepth: 0.75, duration: 1.9, cutoff: 11000, pause: 0.6 } },
+  { name: 'Papaya parrot', settings: { ...defaultSettings, shape: 'saw', frequency: 1750, amplitude: 0.71, vibratoFrequency: 8, vibratoDepth: 650, tremoloFrequency: 2.7, tremoloDepth: 0.6, duration: 1.3, cutoff: 3800, pause: 0.5 } },
+  { name: 'Ice cave pip', settings: { ...defaultSettings, frequency: 2900, amplitude: 0.55, vibratoFrequency: 0, vibratoDepth: 0, tremoloFrequency: 4, tremoloDepth: 1, duration: 0.5, cutoff: 6500, pause: 0.95 } },
+  { name: 'Frog in feathers', settings: { ...defaultSettings, shape: 'square', frequency: 510, amplitude: 0.47, vibratoFrequency: 18, vibratoDepth: 750, tremoloFrequency: 6, tremoloDepth: 0.85, duration: 1.1, cutoff: 1800, pause: 0.45 } },
+  { name: 'Saffron spiral', settings: { ...defaultSettings, frequency: 2500, amplitude: 0.41, vibratoFrequency: 1.4, vibratoDepth: 1200, tremoloFrequency: 0.7, tremoloDepth: 0.5, duration: 2, cutoff: 8000, pause: 0.55 } },
+  { name: 'Neon nectar', settings: { ...defaultSettings, shape: 'saw', frequency: 3600, amplitude: 0.78, vibratoFrequency: 22, vibratoDepth: 300, tremoloFrequency: 11, tremoloDepth: 0.9, duration: 0.9, cutoff: 7000, pause: 0.15 } },
+  { name: 'Pocket pterodactyl', settings: { ...defaultSettings, shape: 'saw', frequency: 1250, amplitude: 0.75, vibratoFrequency: 0.5, vibratoDepth: 900, tremoloFrequency: 18, tremoloDepth: 0.65, duration: 1.8, cutoff: 2800, pause: 0.8 } },
+  { name: 'Quicksilver quail', settings: { ...defaultSettings, frequency: 1800, amplitude: 0.57, vibratoFrequency: 26, vibratoDepth: 1200, tremoloFrequency: 13, tremoloDepth: 1, duration: 0.7, cutoff: 6000, pause: 0.2 } },
+  { name: 'Fern fax', settings: { ...defaultSettings, shape: 'square', frequency: 4100, amplitude: 0.44, vibratoFrequency: 30, vibratoDepth: 50, tremoloFrequency: 3, tremoloDepth: 0.9, duration: 1.4, cutoff: 7500, pause: 0.35 } },
+  { name: 'Teacup tempest', settings: { ...defaultSettings, frequency: 7900, amplitude: 0.42, vibratoFrequency: 28, vibratoDepth: 650, tremoloFrequency: 19, tremoloDepth: 0.95, duration: 0.6, cutoff: 15000, pause: 0.1 } },
+  { name: 'Dreaming heron', settings: { ...defaultSettings, frequency: 690, amplitude: 0.48, vibratoFrequency: 0.4, vibratoDepth: 300, tremoloFrequency: 0.8, tremoloDepth: 0.7, duration: 2, cutoff: 2400, pause: 1 } },
+  { name: 'Bamboo hiccup', settings: { ...defaultSettings, frequency: 1540, amplitude: 0.54, vibratoFrequency: 7.5, vibratoDepth: 900, tremoloFrequency: 7.5, tremoloDepth: 1, duration: 0.55, cutoff: 4500, pause: 0.3 } },
+  { name: 'Apricot alarm', settings: { ...defaultSettings, shape: 'square', frequency: 2350, amplitude: 0.45, vibratoFrequency: 2, vibratoDepth: 600, tremoloFrequency: 8, tremoloDepth: 0.8, duration: 1, cutoff: 5500, pause: 0.25 } },
+  { name: 'Dusty gramophone', settings: { ...defaultSettings, shape: 'saw', frequency: 350, amplitude: 0.78, vibratoFrequency: 3.5, vibratoDepth: 60, tremoloFrequency: 24, tremoloDepth: 0.6, duration: 1.65, cutoff: 900, pause: 0.65 } },
+  { name: 'Aurora warbler', settings: { ...defaultSettings, frequency: 3200, amplitude: 0.46, vibratoFrequency: 6.2, vibratoDepth: 1050, tremoloFrequency: 4.1, tremoloDepth: 0.65, duration: 1.95, cutoff: 10000, pause: 0.5 } },
+  { name: 'Circuit cicada', settings: { ...defaultSettings, shape: 'square', frequency: 5700, amplitude: 0.43, vibratoFrequency: 29, vibratoDepth: 100, tremoloFrequency: 30, tremoloDepth: 0.95, duration: 1.5, cutoff: 10500, pause: 0.4 } },
+  { name: 'Ginger squeak', settings: { ...defaultSettings, shape: 'saw', frequency: 2000, amplitude: 0.76, vibratoFrequency: 12.5, vibratoDepth: 1150, tremoloFrequency: 25, tremoloDepth: 0.7, duration: 0.65, cutoff: 4800, pause: 0.2 } },
+  { name: 'Midnight marimba', settings: { ...defaultSettings, frequency: 740, amplitude: 0.6, vibratoFrequency: 0, vibratoDepth: 0, tremoloFrequency: 6, tremoloDepth: 1, duration: 1.35, cutoff: 2200, pause: 0.45 } },
+  { name: 'Galactic goose', settings: { ...defaultSettings, shape: 'saw', frequency: 460, amplitude: 0.79, vibratoFrequency: 1.6, vibratoDepth: 1200, tremoloFrequency: 12.8, tremoloDepth: 0.8, duration: 2, cutoff: 2200, pause: 0.75 } },
+].map((preset, index) => ({ ...preset, name: `${String(index + 1).padStart(3, '0')} ${preset.name}` }))
 export const OUTPUT_CEILING = 0.25
 const limiterCurve = Float32Array.from({ length: 4097 }, (_, i) => {
   const value = i / 2048 - 1
@@ -96,13 +146,13 @@ export function renderedDuration(settings) {
 }
 
 const masterGraphs = new WeakMap()
+let chorusCycle
 function getMaster(context, destination, settings) {
   let outputs = masterGraphs.get(context)
   if (!outputs) { outputs = new Map(); masterGraphs.set(context, outputs) }
   if (outputs.has(destination)) return outputs.get(destination)
   const input = context.createGain()
   const dry = context.createGain()
-  const chorusMix = context.createGain()
   const chorusWet = context.createGain()
   const chorusStereo = context.createChannelMerger(2)
   const chorusLeft = context.createDelay(0.05)
@@ -111,10 +161,14 @@ function getMaster(context, destination, settings) {
   chorusRight.delayTime.value = 0.021
   // A tiny looping control buffer avoids adding another audible oscillator.
   const lfo = context.createBufferSource()
-  const cycle = context.createBuffer(1, 16000, 8000)
-  const samples = cycle.getChannelData(0)
-  for (let i = 0; i < samples.length; i++) samples[i] = Math.sin(2 * Math.PI * i / samples.length)
-  lfo.buffer = cycle
+  // AudioBuffers can be shared by sources and contexts. Build this immutable
+  // control cycle once rather than allocating/filling it on every chirp/render.
+  if (!chorusCycle) {
+    chorusCycle = context.createBuffer(1, 16000, 8000)
+    const samples = chorusCycle.getChannelData(0)
+    for (let i = 0; i < samples.length; i++) samples[i] = Math.sin(2 * Math.PI * i / samples.length)
+  }
+  lfo.buffer = chorusCycle
   lfo.loop = true
   const modLeft = context.createGain()
   const modRight = context.createGain()
@@ -122,29 +176,28 @@ function getMaster(context, destination, settings) {
   modRight.gain.value = -0.002
   lfo.connect(modLeft).connect(chorusLeft.delayTime)
   lfo.connect(modRight).connect(chorusRight.delayTime)
-  input.connect(dry).connect(chorusMix)
+  const safety = createSafetyFilter(context)
+  input.connect(dry).connect(safety.input)
   input.connect(chorusLeft).connect(chorusStereo, 0, 0)
   input.connect(chorusRight).connect(chorusStereo, 0, 1)
-  chorusStereo.connect(chorusWet).connect(chorusMix)
+  chorusStereo.connect(chorusWet).connect(safety.input)
 
   const limiter = createOutputLimiter(context)
   limiter.oversample = '4x'
-  const safety = createSafetyFilter(context)
   // Oversampling's reconstruction filter can overshoot slightly. This final
   // guard preserves the hard ceiling without filtering after it.
   const peakGuard = context.createWaveShaper()
   peakGuard.curve = peakGuardCurve
   const output = context.createGain()
-  chorusMix.connect(safety.input)
   safety.output.connect(limiter).connect(peakGuard).connect(output).connect(destination)
 
-  const nodes = [input, dry, chorusMix, chorusWet, chorusStereo, chorusLeft, chorusRight, lfo, modLeft, modRight, ...safety.nodes, limiter, peakGuard, output]
+  const nodes = [input, dry, chorusWet, chorusStereo, chorusLeft, chorusRight, lfo, modLeft, modRight, ...safety.nodes, limiter, peakGuard, output]
   let disposed = false
   const values = new Map()
   const master = {
     input,
     update(next, immediate = false) {
-      const chorus = Math.max(0, Math.min(0.5, next.chorus ?? defaultSettings.chorus))
+      const chorus = Math.max(0, Math.min(1, next.chorus ?? defaultSettings.chorus))
       for (const [param, value] of [[dry.gain, 1 - chorus], [chorusWet.gain, chorus]]) {
         if (values.get(param) === value) continue
         values.set(param, value)
@@ -239,6 +292,8 @@ export function createVoice(context, settings, destination = context.destination
     oscillator.stop(end)
   }
   return {
+    startedAt: start,
+    duration: renderedDuration(settings),
     update,
     stop() {
       if (stopping) return
@@ -284,7 +339,9 @@ async function renderUncached(settings) {
   createVoice(context, settings)
   return context.startRendering()
 }
+const wavCache = new WeakMap()
 export function toWav(buffer) {
+  if (wavCache.has(buffer)) return wavCache.get(buffer)
   const channels = buffer.numberOfChannels
   const samples = Array.from({ length: channels }, (_, channel) => buffer.getChannelData(channel))
   const bytes = new ArrayBuffer(44 + buffer.length * channels * 2)
@@ -309,5 +366,7 @@ export function toWav(buffer) {
       view.setInt16(44 + (frame * channels + channel) * 2, Math.max(-1, Math.min(1, sample)) * 32767, true)
     }
   }
-  return new Blob([bytes], { type: 'audio/wav' })
+  const wav = new Blob([bytes], { type: 'audio/wav' })
+  wavCache.set(buffer, wav)
+  return wav
 }

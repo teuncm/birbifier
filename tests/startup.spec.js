@@ -11,7 +11,7 @@ test('each load selects a random preset with repeat enabled and no autoplay', as
     await page.reload()
     const preset = presets[Math.floor(random * presets.length)]
     await expect(page.getByRole('combobox', { name: 'Presets' })).toHaveValue(preset.name)
-    await expect(page.locator('#frequency')).toHaveValue(String(preset.settings.frequency))
+    await expect(page.locator('#frequency')).toHaveAttribute('aria-valuenow', String(preset.settings.frequency))
     await expect(page.locator('#pause')).toHaveValue(String(preset.settings.pause))
     await expect(page.getByRole('button', { name: 'Repeat song', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByRole('status', { name: 'Playback status' })).toHaveText('Ready')

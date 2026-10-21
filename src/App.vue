@@ -8,10 +8,13 @@ import ControlGroup from './components/ControlGroup.vue'
 import PlaybackCursor from './components/PlaybackCursor.vue'
 import PresetSelector from './components/PresetSelector.vue'
 import BirdPortrait from './components/BirdPortrait.vue'
-import { createVoice, defaultSettings, presets, renderedDuration, renderSong, stopMasterEffects, updateMasterEffects, toWav } from './audio.js'
+import { createVoice, defaultSettings, presets, renderSong, stopMasterEffects, updateMasterEffects, toWav } from './audio.js'
 import { MIN_AMPLITUDE, randomizeSettings } from './randomize.js'
 import { buildWaveform } from './waveform.js'
 import { useBirdReflection } from './useBirdReflection.js'
+import { useControlFeedback } from './useControlFeedback.js'
+
+useControlFeedback()
 
 const initialPresetIndex = Math.floor(Math.random() * presets.length)
 const settings = reactive({ ...presets[initialPresetIndex].settings })
@@ -105,12 +108,24 @@ function stop() {
   stopMasterEffects(context)
   voice = undefined
 }
+function stopForBackground() {
+  stop()
+  // Release the audio device as well as cancelling voices and repeat timers.
+  // A fresh context is created only after the user presses Play again.
+  const previousContext = context
+  context = undefined
+  void previousContext?.close().catch(() => {})
+}
+function visibilityChanged() {
+  if (document.hidden) stopForBackground()
+}
 function scheduleRepeat() {
   clearTimeout(repeatTimer)
   const version = playbackVersion
   const remaining = Math.max(0, settings.pause * 1000 - (performance.now() - gapStartedAt))
   repeatTimer = setTimeout(() => {
     if (version !== playbackVersion || !playing.value || !loop.value || disposed) return
+    if (document.hidden) return stopForBackground()
     playOscillator()
     repeatGlow.value = true
   }, remaining)
@@ -118,9 +133,7 @@ function scheduleRepeat() {
 function playOscillator() {
   waiting.value = false
   const version = playbackVersion
-  const startedAt = context.currentTime
-  const duration = renderedDuration(settings)
-  playback.value = { context, startedAt, duration }
+  let startedAt, duration
   function finish() {
     if (version !== playbackVersion || disposed) return
     // The preview includes the chorus tail. Wait for that audio time as well,
@@ -134,13 +147,19 @@ function playOscillator() {
       waiting.value = true
       gapStartedAt = performance.now()
       scheduleRepeat()
-    } else playing.value = false
+    } else {
+      playing.value = false
+      stopMasterEffects(context)
+    }
   }
   voice = createVoice(context, { ...settings }, context.destination, () => {
     if (version !== playbackVersion) return
     voice = undefined
     finish()
   })
+  startedAt = voice.startedAt
+  duration = voice.duration
+  playback.value = { context, startedAt, duration }
 }
 function togglePlayback() {
   clearTimeout(playPressTimer)
@@ -174,6 +193,7 @@ function playbackShortcut(event) {
   if (!event.repeat) void togglePlayback()
 }
 async function startPlayback() {
+  if (disposed || document.hidden) return
   playHint.value = false
   stop()
   const version = playbackVersion
@@ -185,6 +205,7 @@ async function startPlayback() {
     context ||= new AudioContext()
     await context.resume()
     if (disposed || version !== playbackVersion) return
+    if (document.hidden) return stopForBackground()
     playing.value = true
     playOscillator()
   } catch (cause) {
@@ -230,9 +251,10 @@ async function download() {
   } catch (cause) { error.value = cause.message || 'Could not export your song.' }
   finally { exporting.value = false }
 }
-watch(() => Object.keys(defaultSettings).filter(key => key !== 'pause').map(key => settings[key]), () => {
-  voice?.update(settings)
-  updateMasterEffects(context, settings)
+const soundKeys = Object.keys(defaultSettings).filter(key => key !== 'pause')
+watch(() => soundKeys.map(key => settings[key]), () => {
+  if (voice) voice.update(settings)
+  else updateMasterEffects(context, settings)
   // Invalidate in-flight renders, then debounce work while dragging.
   previewVersion++
   clearTimeout(previewTimer)
@@ -248,6 +270,10 @@ watch(loop, enabled => {
 onMounted(() => {
   deviceTheme.addEventListener('change', syncDeviceTheme)
   window.addEventListener('keydown', playbackShortcut)
+  document.addEventListener('visibilitychange', visibilityChanged)
+  window.addEventListener('blur', stopForBackground)
+  window.addEventListener('pagehide', stopForBackground)
+  document.addEventListener('freeze', stopForBackground)
   void updatePreview()
 })
 onBeforeUnmount(() => {
@@ -255,6 +281,10 @@ onBeforeUnmount(() => {
   clearTimeout(downloadPressTimer)
   clearTimeout(playPressTimer)
   window.removeEventListener('keydown', playbackShortcut)
+  document.removeEventListener('visibilitychange', visibilityChanged)
+  window.removeEventListener('blur', stopForBackground)
+  window.removeEventListener('pagehide', stopForBackground)
+  document.removeEventListener('freeze', stopForBackground)
   disposed = true
   previewVersion++
   clearTimeout(previewTimer)
@@ -265,7 +295,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mx-auto max-w-[1160px] px-2 sm:px-5 lg:px-8">
-    <header class="flex h-16 items-center justify-between border-b border-line">
+    <header class="flex h-16 items-center justify-between border-b border-line-subtle">
       <a href="./" class="flex items-center gap-3 text-xl font-bold tracking-tight" aria-label="Birbifier home">
         <img src="/birb.svg" width="38" height="38" alt="" />Birbifier
       </a>
@@ -288,7 +318,7 @@ onBeforeUnmount(() => {
           <section class="panel col-span-2 row-start-2 overflow-hidden" aria-labelledby="preview-heading">
             <div class="min-w-0">
             <div class="flex items-center justify-between px-2 pt-1 sm:px-3">
-              <h2 id="preview-heading" class="flex min-h-7 items-center gap-2 text-sm font-semibold leading-tight"><AppIcon name="wave" :size="17" />Waveform</h2>
+              <h2 id="preview-heading" class="flex min-h-7 items-center text-sm font-semibold leading-tight">Playback</h2>
             </div>
             <div class="waveform-display relative mx-2 mt-1 h-16 overflow-hidden rounded-lg bg-inset sm:mx-3 lg:h-20" :aria-busy="previewBusy">
               <svg viewBox="0 0 720 144" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Waveform preview of the current song">
@@ -299,7 +329,7 @@ onBeforeUnmount(() => {
               <span v-if="!bars.length" class="absolute inset-0 flex items-center justify-center text-xs text-muted">{{ previewBusy ? 'Rendering…' : 'Preview unavailable' }}</span>
             </div>
             </div>
-            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line bg-raised p-2 sm:px-3">
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle bg-surface p-2 sm:px-3">
               <div class="flex flex-wrap items-center gap-2 lg:gap-3">
                 <button class="button-primary" :class="{ 'play-attention': playHint, 'keyboard-pressed': playPressed }" :disabled="starting" :aria-label="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" :title="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" @animationend="playHint = false" @click="togglePlayback"><AppIcon :name="playing ? 'stop' : 'play'" :size="18" /></button>
                 <button class="repeat-button px-4" :class="{ selected: loop, 'repeat-glow': repeatGlow }" :aria-pressed="loop" aria-label="Repeat song" :title="loop ? 'Repeat on' : 'Repeat off'" @animationend="repeatGlow = false" @click="loop = !loop"><AppIcon name="repeat" :size="18" /></button>
@@ -322,7 +352,7 @@ onBeforeUnmount(() => {
               </div>
             </fieldset>
             <div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
-              <RangeControl id="frequency" v-model="settings.frequency" label="Frequency" lock-label="Wave frequency" :min="300" :max="8000" :step="10" unit="Hz" :locked="locks.frequency" :expanded="expanded.wave" @toggle-lock="locks.frequency = !locks.frequency" />
+              <RangeControl id="frequency" v-model="settings.frequency" label="Frequency" lock-label="Wave frequency" :min="250" :max="8000" :step="10" unit="Hz" :locked="locks.frequency" :expanded="expanded.wave" @toggle-lock="locks.frequency = !locks.frequency" />
               <RangeControl id="amplitude" v-model="settings.amplitude" label="Amplitude" :min="MIN_AMPLITUDE" :max="1" step="any" unit="dB" :locked="locks.amplitude" :expanded="expanded.wave" @toggle-lock="locks.amplitude = !locks.amplitude" />
             </div>
             </ControlGroup>
@@ -348,13 +378,13 @@ onBeforeUnmount(() => {
         <aside class="col-span-2 row-start-4 space-y-3 lg:col-span-1 lg:col-start-2 lg:row-start-3">
           <section class="panel space-y-2 p-2 sm:p-3" aria-labelledby="master-heading">
           <h2 id="master-heading" class="text-sm font-semibold leading-tight">Master</h2>
-          <ControlGroup id="effects-controls" title="Effects" icon="filter" caption="Global" :expanded="expanded.effects" @toggle="expanded.effects = !expanded.effects">
-            <RangeControl id="cutoff" v-model="settings.cutoff" label="Low pass" lock-label="Cutoff" :min="300" :max="15000" :step="100" unit="Hz" :locked="locks.cutoff" :expanded="expanded.effects" @toggle-lock="locks.cutoff = !locks.cutoff" />
+          <ControlGroup id="effects-controls" title="Effects" caption="Global" :expanded="expanded.effects" @toggle="expanded.effects = !expanded.effects">
+            <RangeControl id="cutoff" v-model="settings.cutoff" label="Low pass" lock-label="Cutoff" :min="250" :max="15000" :step="50" unit="Hz" :locked="locks.cutoff" :expanded="expanded.effects" @toggle-lock="locks.cutoff = !locks.cutoff" />
             <div class="mt-3">
-              <RangeControl id="chorus" v-model="settings.chorus" label="Chorus" :min="0.3" :max="0.5" :step="0.01" :scale="100" unit="%" :locked="locks.chorus" :expanded="expanded.effects" @toggle-lock="locks.chorus = !locks.chorus" />
+              <RangeControl id="chorus" v-model="settings.chorus" label="Chorus" :min="0" :max="1" :step="0.01" :scale="100" unit="%" :locked="locks.chorus" :expanded="expanded.effects" @toggle-lock="locks.chorus = !locks.chorus" />
             </div>
           </ControlGroup>
-          <ControlGroup id="timing-controls" title="Timing" icon="repeat" :expanded="expanded.timing" @toggle="expanded.timing = !expanded.timing">
+          <ControlGroup id="timing-controls" title="Timing" :expanded="expanded.timing" @toggle="expanded.timing = !expanded.timing">
             <RangeControl id="duration" v-model="settings.duration" label="Duration" lock-label="Chirp duration" :min="0.5" :max="2" :step="0.05" unit="s" :locked="locks.duration" :expanded="expanded.timing" @toggle-lock="locks.duration = !locks.duration" />
             <div class="mt-3">
               <RangeControl id="pause" v-model="settings.pause" label="Pause" lock-label="Repeat pause" :min="0" :max="1" :step="0.05" unit="s" :locked="locks.pause" :expanded="expanded.timing" @toggle-lock="locks.pause = !locks.pause" />
@@ -367,7 +397,7 @@ onBeforeUnmount(() => {
       <p v-if="error" class="error-message mt-5 rounded-lg border p-4 text-sm" role="alert">{{ error }}</p>
     </main>
     <Teleport to="body">
-        <div v-if="reflection.visible.value" class="bird-reflection pointer-events-none fixed z-50 flex items-center justify-center rounded-full border border-line p-1 shadow-lg" :style="reflection.style.value" aria-hidden="true">
+        <div v-if="reflection.visible.value" class="bird-reflection pointer-events-none fixed z-50 flex items-center justify-center rounded-full border border-line-subtle p-1 shadow-lg" :style="reflection.style.value" aria-hidden="true">
           <BirdPortrait ghost class="w-full opacity-80" :settings="settings" :singing="playing && !waiting" :repeat="loop" />
         </div>
     </Teleport>

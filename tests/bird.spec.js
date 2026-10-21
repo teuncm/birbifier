@@ -7,7 +7,7 @@ async function setSlider(page, id, value) {
   }, String(value))
 }
 
-test('deep tremolo makes the beak follow the slower modulation frequency', async ({ page }) => {
+test('above 80% depth, tremolo alone controls beak frequency', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await setSlider(page, 'duration', 2)
@@ -20,8 +20,12 @@ test('deep tremolo makes the beak follow the slower modulation frequency', async
   await setSlider(page, 'tremolo-depth', 0.81)
   await expect(beak).toHaveCSS('animation-duration', '0.125s')
   await setSlider(page, 'tremolo-frequency', 20)
-  await expect(beak).toHaveCSS('animation-duration', '0.05s')
+  await expect(beak).toHaveCSS('animation-duration', '0.025s')
+  await setSlider(page, 'vibrato-frequency', 2)
+  await expect(beak).toHaveCSS('animation-duration', '0.025s')
   await setSlider(page, 'tremolo-frequency', 4)
+  await expect(beak).toHaveCSS('animation-duration', '0.125s')
+  await setSlider(page, 'vibrato-frequency', 10)
   await setSlider(page, 'tremolo-depth', 0.8)
   await expect(beak).toHaveCSS('animation-duration', '0.05s')
 })

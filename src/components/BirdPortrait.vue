@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, useId } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({ settings: { type: Object, required: true }, singing: Boolean, ghost: Boolean, repeat: Boolean })
@@ -7,10 +7,28 @@ const headingId = useId()
 const clipId = useId()
 const portrait = ref(null)
 const portraitFrame = ref(null)
-const flight = ref(null)
+let flight = null
+const airborne = ref(false)
+const facing = ref(null)
+const gaze = ref(null)
+let homeRect, homeDirty = true, geometryObserver, dragFrame
+function invalidateHome() { homeDirty = true }
+function readHome() {
+  if (homeDirty || !homeRect) {
+    homeRect = portraitFrame.value.getBoundingClientRect()
+    homeDirty = false
+  }
+  return homeRect
+}
+function paintFlight() {
+  const style = portrait.value.style
+  style.transform = `translate3d(${flight.x.toFixed(2)}px, ${flight.y.toFixed(2)}px, 0)`
+  const width = `${flight.width.toFixed(2)}px`, height = `${flight.height.toFixed(2)}px`
+  if (style.width !== width) style.width = width
+  if (style.height !== height) style.height = height
+}
 const returning = ref(false)
-const facingLeft = ref(false)
-const lookAngle = ref(0)
+let facingLeft = false, lookAngle = 0
 const feathers = ref([])
 const featherTimers = new Map()
 let featherId = 0
@@ -23,9 +41,9 @@ function dropFeather() {
   if (feathers.value.length >= 16) removeFeather(feathers.value[0].id)
   const id = ++featherId
   feathers.value.push({
-    id, x: flight.value.left + flight.value.x + flight.value.width * 0.45,
-    y: flight.value.top + flight.value.y + flight.value.height * 0.6,
-    size: Math.max(8, Math.min(14, flight.value.width * 0.04)),
+    id, x: flight.left + flight.x + flight.width * 0.45,
+    y: flight.top + flight.y + flight.height * 0.6,
+    size: Math.max(8, Math.min(14, flight.width * 0.04)),
     color: bird.value.body, vein: bird.value.wing,
     drift: `${(id % 2 ? 1 : -1) * (14 + id % 4 * 6)}px`,
     turn: `${(id % 2 ? 1 : -1) * (65 + id % 3 * 25)}deg`,
@@ -33,11 +51,21 @@ function dropFeather() {
   featherTimers.set(id, setTimeout(() => removeFeather(id), 1400))
 }
 let pointerId = null, grabX = 0, grabY = 0, returnFrame
+let pointerSamples = []
 function lookHome(home) {
-  const dx = home.left - flight.value.left - flight.value.x
-  const dy = home.top - flight.value.top - flight.value.y
-  if (Math.abs(dx) > 1) facingLeft.value = dx < 0
-  lookAngle.value = Math.max(-25, Math.min(25, Math.atan2(dy, Math.max(1, Math.abs(dx))) * 180 / Math.PI))
+  const dx = home.left - flight.left - flight.x
+  const dy = home.top - flight.top - flight.y
+  const nextLeft = Math.abs(dx) > 1 ? dx < 0 : facingLeft
+  if (nextLeft !== facingLeft) {
+    facingLeft = nextLeft
+    if (facingLeft) facing.value.setAttribute('transform', `translate(${bird.value.centerX * 2} 0) scale(-1 1)`)
+    else facing.value.removeAttribute('transform')
+  }
+  const angle = Math.round(Math.max(-25, Math.min(25, Math.atan2(dy, Math.max(1, Math.abs(dx))) * 180 / Math.PI)) * 2) / 2
+  if (angle !== lookAngle) {
+    lookAngle = angle
+    gaze.value.setAttribute('transform', `rotate(${angle} 186 104)`)
+  }
 }
 function startDrag(event) {
   if (props.ghost || event.button !== 0 || pointerId !== null) return
@@ -45,70 +73,116 @@ function startDrag(event) {
   const rect = portrait.value.getBoundingClientRect()
   cancelAnimationFrame(returnFrame)
   returning.value = false
-  flight.value = { left: rect.left, top: rect.top, width: rect.width, height: rect.height, x: 0, y: 0 }
+  airborne.value = true
+  homeDirty = true
+  flight = { left: rect.left, top: rect.top, width: rect.width, height: rect.height, x: 0, y: 0 }
+  Object.assign(portrait.value.style, { position: 'fixed', left: `${rect.left}px`, top: `${rect.top}px`, zIndex: '60', willChange: 'transform' })
+  paintFlight()
   grabX = event.clientX
   grabY = event.clientY
   pointerId = event.pointerId
-  lookHome(portraitFrame.value.getBoundingClientRect())
+  pointerSamples = [{ x: event.clientX, y: event.clientY, time: event.timeStamp }]
+  lookHome(readHome())
   portrait.value.setPointerCapture(pointerId)
 }
 function drag(event) {
   if (event.pointerId !== pointerId) return
-  flight.value = { ...flight.value, x: event.clientX - grabX, y: event.clientY - grabY }
-  lookHome(portraitFrame.value.getBoundingClientRect())
+  pointerSamples.push({ x: event.clientX, y: event.clientY, time: event.timeStamp })
+  while (pointerSamples.length > 32 || (pointerSamples.length > 2 && pointerSamples[1].time < event.timeStamp - 100)) pointerSamples.shift()
+  flight.x = event.clientX - grabX
+  flight.y = event.clientY - grabY
+  if (dragFrame === undefined) dragFrame = requestAnimationFrame(() => {
+    dragFrame = undefined
+    if (!flight || pointerId === null) return
+    lookHome(readHome())
+    paintFlight()
+  })
 }
 function finishReturn() {
   if (!returning.value) return
   cancelAnimationFrame(returnFrame)
   returning.value = false
-  flight.value = null
-  facingLeft.value = false
-  lookAngle.value = 0
+  flight = null
+  airborne.value = false
+  portrait.value.removeAttribute('style')
+  facing.value.removeAttribute('transform')
+  gaze.value.removeAttribute('transform')
+  facingLeft = false
+  lookAngle = 0
 }
 function release(event) {
   if (event.pointerId !== pointerId) return
+  const lastMovedAt = pointerSamples.at(-1).time
+  if (event.type === 'pointerup') drag(event)
+  cancelAnimationFrame(dragFrame)
+  dragFrame = undefined
+  paintFlight()
+  const first = pointerSamples[0], last = pointerSamples.at(-1)
+  const elapsed = Math.max(16, last.time - first.time)
+  const fresh = event.type === 'pointerup' && event.timeStamp - lastMovedAt < 100
+  let vx = fresh ? (last.x - first.x) / elapsed * 1.45 : 0
+  let vy = fresh ? (last.y - first.y) / elapsed * 1.45 : 0
+  const speed = Math.hypot(vx, vy)
+  if (speed > 4.5) { vx *= 4.5 / speed; vy *= 4.5 / speed }
   pointerId = null
-  const home = portraitFrame.value.getBoundingClientRect()
+  homeDirty = true
+  const home = readHome()
   returning.value = true
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return finishReturn()
-  const start = { x: flight.value.x, y: flight.value.y }
-  const end = { x: home.left - flight.value.left, y: home.top - flight.value.top }
-  const dx = end.x - start.x, dy = end.y - start.y
+  const start = { x: flight.x, y: flight.y }
+  const dx = home.left - flight.left - start.x, dy = home.top - flight.top - start.y
   const distance = Math.hypot(dx, dy)
   const bend = dx >= 0 ? -1 : 1
   const arc = Math.min(80, distance * 0.3)
-  const control = {
-    x: (start.x + end.x) / 2 - dy / Math.max(1, distance) * arc * bend,
-    y: (start.y + end.y) / 2 + dx / Math.max(1, distance) * arc * bend,
-  }
+  const arcX = -dy / Math.max(1, distance) * arc * bend
+  const arcY = dx / Math.max(1, distance) * arc * bend
   const startedAt = performance.now()
+  const landing = { left: home.left, top: home.top, width: home.width, height: home.height }
+  let lastFrame = startedAt
   let lastFeather = startedAt - 140
   function fly(now) {
     const progress = Math.min(1, (now - startedAt) / 1800)
-    // Ease along a quadratic arc, with a gentle takeoff and landing.
+    // Refresh cached geometry after scrolling, resizing, or layout changes.
+    const target = readHome()
+    // Chase a moving perch smoothly instead of jumping when the page scrolls.
+    const follow = 1 - Math.exp(-(now - lastFrame) / 70)
+    lastFrame = now
+    for (const key of ['left', 'top', 'width', 'height']) landing[key] += (target[key] - landing[key]) * follow
     const t = progress * progress * (3 - 2 * progress)
-    const u = 1 - t
-    flight.value = { ...flight.value,
-      x: u * u * start.x + 2 * u * t * control.x + t * t * end.x,
-      y: u * u * start.y + 2 * u * t * control.y + t * t * end.y,
-    }
-    lookHome(home)
+    const curve = 16 * progress ** 2 * (1 - progress) ** 2
+    const momentum = (now - startedAt) * Math.exp(-(now - startedAt) / 220) * (1 - progress) ** 2
+    Object.assign(flight, {
+      x: start.x + (landing.left - flight.left - start.x) * t + vx * momentum + arcX * curve,
+      y: start.y + (landing.top - flight.top - start.y) * t + vy * momentum + arcY * curve,
+      width: flight.width + (landing.width - flight.width) * t,
+      height: flight.height + (landing.height - flight.height) * t,
+    })
+    lookHome(target)
+    paintFlight()
     if (distance > 4 && progress < 0.95 && now - lastFeather >= 140) {
       dropFeather()
       lastFeather = now
     }
-    if (progress < 1) returnFrame = requestAnimationFrame(fly)
+    const settled = ['left', 'top', 'width', 'height'].every(key => Math.abs(landing[key] - target[key]) < 0.1)
+    if (progress < 1 || !settled) returnFrame = requestAnimationFrame(fly)
     else finishReturn()
   }
   returnFrame = requestAnimationFrame(fly)
 }
-const flightStyle = computed(() => flight.value ? {
-  position: 'fixed', left: `${flight.value.left}px`, top: `${flight.value.top}px`,
-  width: `${flight.value.width}px`, height: `${flight.value.height}px`, zIndex: 60,
-  transform: `translate3d(${flight.value.x}px, ${flight.value.y}px, 0)`,
-} : undefined)
+onMounted(() => {
+  if (props.ghost) return
+  window.addEventListener('scroll', invalidateHome, { passive: true, capture: true })
+  window.addEventListener('resize', invalidateHome, { passive: true })
+  geometryObserver = new ResizeObserver(invalidateHome)
+  geometryObserver.observe(portraitFrame.value)
+  geometryObserver.observe(document.body)
+})
 onBeforeUnmount(() => {
   cancelAnimationFrame(returnFrame)
+  cancelAnimationFrame(dragFrame)
+  geometryObserver?.disconnect()
+  window.removeEventListener('scroll', invalidateHome, true)
+  window.removeEventListener('resize', invalidateHome)
   for (const timer of featherTimers.values()) clearTimeout(timer)
 })
 const bird = computed(() => {
@@ -122,17 +196,17 @@ const bird = computed(() => {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
     return seed / 4294967296
   }
-  const hue = Math.round(25 + (s.frequency - 300) / 7700 * 310)
-  const saturation = 27 + s.cutoff / 15000 * 52
-  const radius = 41 + s.amplitude * 28
-  const headScale = 0.72 + (s.duration - 0.5) / 1.5 * 0.56
-  const tail = 24 + s.vibratoDepth / 1200 * 46
-  const beak = 25 + s.pause * 24
-  const lift = s.tremoloDepth * 24
+  const hue = Math.round(25 + (s.frequency - 250) / 7750 * 310)
+  const saturation = 24 + s.cutoff / 15000 * 58
+  const radius = 39 + s.amplitude * 32
+  const headScale = 0.69 + (s.duration - 0.5) / 1.5 * 0.62
+  const tail = 22 + s.vibratoDepth / 1200 * 50
+  const beak = 24 + s.pause * 27
+  const lift = s.tremoloDepth * 27
   const beakFrequency = s.tremoloDepth > 0.8
-    ? Math.min(s.tremoloFrequency, s.vibratoFrequency)
+    ? s.tremoloFrequency
     : s.vibratoFrequency
-  const footBulk = Math.max(0, Math.min(1, ((s.chorus ?? 0.3) - 0.3) / 0.2))
+  const footBulk = Math.max(0, Math.min(1, s.chorus ?? 0.3))
   // Keep exaggerated crests, beaks, and long tails inside the portrait.
   const left = Math.min(12, 94 - tail - 8)
   const top = Math.min(8, 104 - 84 * headScale - lift - 5)
@@ -154,16 +228,16 @@ const bird = computed(() => {
     width: radius,
     height: radius,
     tail,
-    crest: 8 + s.vibratoFrequency / 30 * 26,
-    spread: 5 + s.tremoloFrequency / 30 * 32,
+    crest: 7 + s.vibratoFrequency / 30 * 29,
+    spread: 3 + s.tremoloFrequency / 30 * 36,
     beak,
     lift,
-    footWidth: 3 + footBulk * 5,
-    legWidth: 2.5 + footBulk * 4,
-    toeLength: 5 + footBulk * 5,
-    stance: 6 + Math.max(0, Math.min(1, (s.cutoff - 300) / 14700)) * 18,
+    footWidth: 2.75 + footBulk * 5.5,
+    legWidth: 2.3 + footBulk * 4.4,
+    toeLength: 4.75 + footBulk * 5.5,
+    stance: 5 + Math.max(0, Math.min(1, (s.cutoff - 250) / 14750)) * 20,
     feathers: 3 + Math.round(s.tremoloFrequency / 30 * 6),
-    spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 10) }, () => ({
+    spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 11) }, () => ({
       x: 128 + random() * 35, y: 136 + random() * 36, r: 1.5 + random() * 2.5,
     })),
     beat: `${0.5 / Math.max(2, Math.min(20, beakFrequency))}s`,
@@ -196,9 +270,9 @@ function downloadBird() {
     </div>
     <!-- Reserve the portrait's space while it flies outside the card. -->
     <div ref="portraitFrame" class="aspect-[23/20] w-full">
-    <svg ref="portrait" xmlns="http://www.w3.org/2000/svg" :viewBox="bird.viewBox" class="block h-full w-full" :class="{ 'bird-draggable': !ghost, 'bird-returning': returning }" :style="flightStyle" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing" @pointerdown="startDrag" @pointermove="drag" @pointerup="release" @pointercancel="release" @lostpointercapture="release">
+    <svg ref="portrait" xmlns="http://www.w3.org/2000/svg" :viewBox="bird.viewBox" class="block h-full w-full" :class="{ 'bird-draggable': !ghost, 'bird-returning': returning, 'bird-airborne': airborne }" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing" @pointerdown="startDrag" @pointermove="drag" @pointerup="release" @pointercancel="release" @lostpointercapture="release">
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
-      <g data-facing :transform="facingLeft ? `translate(${bird.centerX * 2} 0) scale(-1 1)` : undefined">
+      <g ref="facing" data-facing>
       <ellipse data-ground cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
       <g data-legs stroke="#665541" stroke-width="4" stroke-linecap="round" fill="none">
         <path :stroke-width="bird.legWidth" :d="`M143 ${150 - bird.lift}L${157 - bird.stance} 220M172 ${150 - bird.lift}L${157 + bird.stance} 220`" />
@@ -220,7 +294,7 @@ function downloadBird() {
       <path v-for="i in bird.feathers" :key="i" :d="`M${114 + i * 5} 149q14 9 4 21`" fill="none" :stroke="bird.body" stroke-width="2" stroke-linecap="round" />
       </g>
       </g>
-      <g data-gaze :transform="flight ? `rotate(${lookAngle} 186 104)` : undefined">
+      <g ref="gaze" data-gaze>
       <g data-head :transform="`translate(186 104) scale(${bird.headScale}) translate(-186 -104)`">
       <g data-crest :fill="bird.wing">
         <path :transform="`rotate(${-bird.spread} 180 84)`" :d="`M174 86Q162 ${68 - bird.crest} 174 ${60 - bird.crest}Q185 ${66 - bird.crest} 185 88Z`" />
@@ -262,7 +336,7 @@ function downloadBird() {
 .bird-draggable { cursor: grab; touch-action: none; }
 .bird-draggable:active { cursor: grabbing; }
 .bird-returning { pointer-events: none; overflow: visible; }
-.bird-returning [data-ground] { visibility: hidden; }
+.bird-airborne [data-ground] { visibility: hidden; }
 .bird-returning [data-legs] {
   transform-origin: 157px 150px;
   animation: bird-leg-wiggle 140ms ease-in-out infinite alternate;

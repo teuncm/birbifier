@@ -8,12 +8,15 @@ const props = defineProps({
   locked: Boolean, lockLabel: String,
   expanded: { type: Boolean, default: true },
 })
-defineEmits(['update:modelValue', 'toggle-lock'])
+const emit = defineEmits(['update:modelValue', 'toggle-lock'])
 const valueLabel = computed(() => {
   const value = props.unit === 'dB' ? 20 * Math.log10(props.modelValue) : props.modelValue * props.scale
   return `${Number(value.toFixed(2)).toLocaleString()}${props.unit === '%' ? '%' : ` ${props.unit}`}`
 })
 const fill = computed(() => `${(props.modelValue - props.min) / (props.max - props.min) * 100}%`)
+function update(event) {
+  emit('update:modelValue', Number(event.target.value))
+}
 </script>
 <template>
   <div class="range-control">
@@ -24,6 +27,6 @@ const fill = computed(() => `${(props.modelValue - props.min) / (props.max - pro
         <ParameterLock :locked="locked" :label="lockLabel || label" @toggle="$emit('toggle-lock')" />
       </div>
     </div>
-    <input v-if="expanded" :id="id" type="range" :min="min" :max="max" :step="step" :value="modelValue" :aria-valuetext="valueLabel" :style="{ '--fill': fill }" @input="$emit('update:modelValue', Number($event.target.value))" />
+    <input v-if="expanded" :id="id" type="range" :min="min" :max="max" :step="step" :value="modelValue" :aria-valuemin="min" :aria-valuemax="max" :aria-valuenow="modelValue" :aria-valuetext="valueLabel" :style="{ '--fill': fill }" @input="update" />
   </div>
 </template>
