@@ -1,10 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="/birb.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f6f7f2">
+    <meta name="theme-color" content="#191a1b">
+    <script>
+      let savedTheme
+      try { savedTheme = localStorage.getItem('birbifier-theme') } catch {}
+      const theme = savedTheme === 'light' || savedTheme === 'dark'
+        ? savedTheme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      document.documentElement.dataset.theme = theme
+      document.documentElement.dataset.themePreference = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'system'
+      document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#191a1b' : '#e1e6d9'
+    </script>
     <meta name="author" content="Teun M.">
     <meta name="description" content="Create bird sounds in your browser with Birbifier. Explore 50 presets, shape vibrato and tremolo, generate SVG birds, and download your birdsong as WAV.">
     <title>Birbifier — Free Online Birdsong Synthesizer</title>

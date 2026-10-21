@@ -7,6 +7,25 @@ async function setSlider(page, id, value) {
   }, String(value))
 }
 
+test('deep tremolo makes the beak follow the slower modulation frequency', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
+  await setSlider(page, 'duration', 2)
+  await setSlider(page, 'vibrato-frequency', 10)
+  await setSlider(page, 'tremolo-frequency', 4)
+  await setSlider(page, 'tremolo-depth', 0.8)
+  await page.getByRole('button', { name: 'Play song', exact: true }).click()
+  const beak = page.getByRole('img', { name: 'Bird generated' }).locator('[data-beak]')
+  await expect(beak).toHaveCSS('animation-duration', '0.05s')
+  await setSlider(page, 'tremolo-depth', 0.81)
+  await expect(beak).toHaveCSS('animation-duration', '0.125s')
+  await setSlider(page, 'tremolo-frequency', 20)
+  await expect(beak).toHaveCSS('animation-duration', '0.05s')
+  await setSlider(page, 'tremolo-frequency', 4)
+  await setSlider(page, 'tremolo-depth', 0.8)
+  await expect(beak).toHaveCSS('animation-duration', '0.05s')
+})
+
 test('sound settings generate reproducible birds and a standalone SVG download', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
@@ -17,7 +36,7 @@ test('sound settings generate reproducible birds and a standalone SVG download',
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await expect.poll(() => bird.innerHTML()).toBe(original)
   // Every sound parameter contributes to the portrait.
-  for (const [id, value] of Object.entries({ frequency: 8000, amplitude: 1, 'vibrato-speed': 40, 'vibrato-depth': 1200, 'tremolo-speed': 30, 'tremolo-depth': 1, duration: 2, pause: 1, cutoff: 200 })) {
+  for (const [id, value] of Object.entries({ frequency: 8000, amplitude: 1, 'vibrato-frequency': 30, 'vibrato-depth': 1200, 'tremolo-frequency': 30, 'tremolo-depth': 1, duration: 2, pause: 1, cutoff: 300 })) {
     const before = await bird.innerHTML()
     await setSlider(page, id, value)
     await expect.poll(() => bird.innerHTML()).not.toBe(before)

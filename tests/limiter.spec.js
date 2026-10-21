@@ -34,7 +34,7 @@ test('synthesis and WAV export stay bounded at extreme settings and excessive ga
     const results = []
     for (const shape of ['sine', 'square', 'saw']) {
       for (const amplitude of [1, 100]) {
-        const buffer = await renderSong({ ...defaultSettings, shape, amplitude, frequency: 100, vibratoDepth: 1200, vibratoSpeed: 40, tremoloDepth: 1, tremoloSpeed: 30, cutoff: 20000, duration: 0.5 })
+        const buffer = await renderSong({ ...defaultSettings, shape, amplitude, frequency: 100, vibratoDepth: 1200, vibratoFrequency: 40, tremoloDepth: 1, tremoloFrequency: 30, cutoff: 20000, duration: 0.5 })
         const samples = buffer.getChannelData(0)
         const right = buffer.getChannelData(1)
         const wav = new DataView(await toWav(buffer).arrayBuffer())

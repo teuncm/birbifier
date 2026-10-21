@@ -1,6 +1,8 @@
 <script setup>
 defineProps({ name: String, size: { type: Number, default: 20 } })
 const paths = {
+  sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5',
+  moon: 'M20.5 14A9 9 0 0 1 10 3.5 9 9 0 1 0 20.5 14Z',
   play: 'm9 5 11 7-11 7Z', stop: 'M6 6h12v12H6Z',
   reset: 'M3 10a9 9 0 1 1 2 8M3 4v6h6',
   dice: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3ZM8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01',

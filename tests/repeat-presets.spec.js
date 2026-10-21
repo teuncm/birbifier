@@ -88,7 +88,7 @@ test('playback frames do not reset a preset choice before it is committed', asyn
   await page.getByRole('button', { name: 'Play song', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Stop song' })).toBeVisible()
   await expect(page.locator('div[aria-busy]')).toHaveAttribute('aria-busy', 'false')
-  await page.waitForFunction(() => Number(document.querySelector('line[stroke="#355a36"]')?.getAttribute('x1')) > 20)
+  await page.waitForFunction(() => Number(document.querySelector('line[data-playback-cursor]')?.getAttribute('x1')) > 20)
   const pendingChoice = await select.evaluate(async element => {
     // A native picker may change its selection before firing the change event.
     element.selectedIndex = [...element.options].findIndex(option => option.value === 'Forest trill')
@@ -161,7 +161,7 @@ test('tremolo stays centered at zero, partial, and full depth', async ({ page })
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
-  await setSlider(page, 'tremolo-speed', 6)
+  await setSlider(page, 'tremolo-frequency', 6)
   for (const depth of [0, 0.45, 1]) {
     await setSlider(page, 'tremolo-depth', depth)
     const bounds = await page.locator('#tremolo-lfo path').last().evaluate(path => {

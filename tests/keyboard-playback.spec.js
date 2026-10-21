@@ -52,7 +52,7 @@ test('arrow keys still edit focused sliders and XY controls without auditioning 
   await expect(page.locator('#frequency')).toHaveValue('2410')
   await page.locator('#vibrato-lfo').focus()
   await page.keyboard.press('ArrowRight')
-  await expect(page.locator('#vibrato-speed')).toHaveValue('8.1')
+  await expect(page.locator('#vibrato-frequency')).toHaveValue('8.1')
   await expect(page.getByRole('button', { name: 'Play song', exact: true })).toBeVisible()
 })
 

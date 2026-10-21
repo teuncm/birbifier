@@ -9,13 +9,30 @@ import PlaybackCursor from './components/PlaybackCursor.vue'
 import PresetSelector from './components/PresetSelector.vue'
 import BirdPortrait from './components/BirdPortrait.vue'
 import { createVoice, defaultSettings, presets, renderedDuration, renderSong, stopMasterEffects, updateMasterEffects, toWav } from './audio.js'
-import { randomizeSettings } from './randomize.js'
+import { MIN_AMPLITUDE, randomizeSettings } from './randomize.js'
 import { buildWaveform } from './waveform.js'
 import { useBirdReflection } from './useBirdReflection.js'
 
 const initialPresetIndex = Math.floor(Math.random() * presets.length)
 const settings = reactive({ ...presets[initialPresetIndex].settings })
 const mainBird = ref(null)
+const theme = ref(document.documentElement.dataset.theme || 'dark')
+const deviceTheme = window.matchMedia('(prefers-color-scheme: dark)')
+let followDeviceTheme = document.documentElement.dataset.themePreference === 'system'
+function applyTheme(next) {
+  theme.value = next
+  document.documentElement.dataset.theme = theme.value
+  document.querySelector('meta[name="theme-color"]').content = theme.value === 'dark' ? '#191a1b' : '#e1e6d9'
+}
+function syncDeviceTheme(event) {
+  if (followDeviceTheme) applyTheme(event.matches ? 'dark' : 'light')
+}
+function toggleTheme() {
+  followDeviceTheme = false
+  applyTheme(theme.value === 'dark' ? 'light' : 'dark')
+  document.documentElement.dataset.themePreference = theme.value
+  try { localStorage.setItem('birbifier-theme', theme.value) } catch {}
+}
 const presetSelector = ref(null)
 const reflection = useBirdReflection(settings, mainBird)
 const locks = reactive(Object.fromEntries(Object.keys(defaultSettings).map(key => [key, key === 'chorus'])))
@@ -46,7 +63,7 @@ const activePreset = computed({
     if (preset) applyPreset(preset)
   },
 })
-let context, voice, repeatTimer, previewTimer, previewRunning = false, previewQueued = false, gapStartedAt = 0, previewVersion = 0, playbackVersion = 0, disposed = false
+let context, voice, repeatTimer, completionTimer, previewTimer, previewRunning = false, previewQueued = false, gapStartedAt = 0, previewVersion = 0, playbackVersion = 0, disposed = false
 
 function restartIfActive() {
   if (playing.value || starting.value) void startPlayback()
@@ -65,7 +82,11 @@ function browsePreset(direction) {
 }
 function randomize() {
   Object.assign(settings, randomizeSettings(settings, locks))
-  restartIfActive()
+  void startPlayback()
+}
+function resetSound() {
+  stop()
+  applyPreset(presets[0], false)
 }
 function toggleAllControls() {
   const next = !anyExpanded.value
@@ -78,6 +99,7 @@ function stop() {
   starting.value = false
   waiting.value = false
   clearTimeout(repeatTimer)
+  clearTimeout(completionTimer)
   playback.value = null
   voice?.stop()
   stopMasterEffects(context)
@@ -99,15 +121,25 @@ function playOscillator() {
   const startedAt = context.currentTime
   const duration = renderedDuration(settings)
   playback.value = { context, startedAt, duration }
-  voice = createVoice(context, { ...settings }, context.destination, () => {
-    if (version !== playbackVersion) return
-    voice = undefined
-    playback.value = null
+  function finish() {
+    if (version !== playbackVersion || disposed) return
+    // The preview includes the chorus tail. Wait for that audio time as well,
+    // and retain the cursor so its final frame can reach the right edge.
+    const remaining = startedAt + duration - context.currentTime
+    if (remaining > 0) {
+      completionTimer = setTimeout(finish, Math.max(4, remaining * 1000))
+      return
+    }
     if (playing.value && loop.value) {
       waiting.value = true
       gapStartedAt = performance.now()
       scheduleRepeat()
     } else playing.value = false
+  }
+  voice = createVoice(context, { ...settings }, context.destination, () => {
+    if (version !== playbackVersion) return
+    voice = undefined
+    finish()
   })
 }
 function togglePlayback() {
@@ -214,10 +246,12 @@ watch(loop, enabled => {
   }
 })
 onMounted(() => {
+  deviceTheme.addEventListener('change', syncDeviceTheme)
   window.addEventListener('keydown', playbackShortcut)
   void updatePreview()
 })
 onBeforeUnmount(() => {
+  deviceTheme.removeEventListener('change', syncDeviceTheme)
   clearTimeout(downloadPressTimer)
   clearTimeout(playPressTimer)
   window.removeEventListener('keydown', playbackShortcut)
@@ -235,14 +269,17 @@ onBeforeUnmount(() => {
       <a href="./" class="flex items-center gap-3 text-xl font-bold tracking-tight" aria-label="Birbifier home">
         <img src="/birb.svg" width="38" height="38" alt="" />Birbifier
       </a>
-      <a href="https://teuncm.nl/" class="text-sm font-medium text-muted hover:text-moss hover:underline" aria-label="Teun M. — teuncm.nl">Teun M. ↗</a>
+      <div class="flex items-center gap-3">
+        <a href="https://teuncm.nl/" class="text-sm font-medium text-muted hover:text-moss hover:underline" aria-label="Teun M. — teuncm.nl">Teun M. ↗</a>
+        <button class="icon-button h-8 w-8" :aria-label="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" :title="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" @click="toggleTheme"><AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="17" /></button>
+      </div>
     </header>
     <main class="py-4 lg:py-6" @pointerdown.capture="reflection.rememberControl" @keydown.capture="reflection.rememberControl" @input.capture="reflection.rememberControl" @change.capture="reflection.rememberControl">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-3xl font-semibold tracking-tight">Birdsong synthesizer</h1>
         <div class="flex flex-wrap items-center gap-2">
           <button class="button-secondary" :disabled="allLocked" title="Randomize unlocked parameters" @click="randomize"><AppIcon name="dice" :size="16" />Randomize</button>
-          <button class="button-secondary border-red-300 bg-red-50 text-red-700 hover:bg-red-100" @click="applyPreset(presets[0])"><AppIcon name="reset" :size="16" />Reset</button>
+          <button class="button-secondary reset-button" @click="resetSound"><AppIcon name="reset" :size="16" />Reset</button>
           <button class="button-secondary" :aria-expanded="anyExpanded" aria-controls="wave-controls vibrato-controls tremolo-controls timing-controls effects-controls" @click="toggleAllControls"><AppIcon :name="anyExpanded ? 'up' : 'down'" :size="16" />{{ anyExpanded ? 'Collapse' : 'Expand' }}</button>
         </div>
       </div>
@@ -253,19 +290,16 @@ onBeforeUnmount(() => {
             <div class="flex items-center justify-between px-2 pt-1 sm:px-3">
               <h2 id="preview-heading" class="flex min-h-7 items-center gap-2 text-sm font-semibold leading-tight"><AppIcon name="wave" :size="17" />Waveform</h2>
             </div>
-            <div class="relative mx-2 mt-2 h-24 overflow-hidden rounded-lg bg-[#f7f9f4] sm:mx-3 lg:h-28" :aria-busy="previewBusy">
+            <div class="waveform-display relative mx-2 mt-1 h-16 overflow-hidden rounded-lg bg-inset sm:mx-3 lg:h-20" :aria-busy="previewBusy">
               <svg viewBox="0 0 720 144" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Waveform preview of the current song">
-                <defs><pattern id="grid" width="60" height="36" patternUnits="userSpaceOnUse"><path d="M60 0H0V36" fill="none" stroke="#dae3d0" stroke-width="1" /></pattern></defs>
-                <rect width="720" height="144" fill="url(#grid)" />
-                <path d="M0 72H720" stroke="#acbf9b" stroke-width="1" />
                 <desc>Bar height shows the strongest peak from either stereo channel.</desc>
-                <line v-for="(height, i) in bars" :key="i" :x1="i * 4 + 2" :x2="i * 4 + 2" :y1="72 - height / 2" :y2="72 + height / 2" stroke="#628247" stroke-width="2" stroke-linecap="round" />
+                <line v-for="(height, i) in bars" :key="i" :x1="i * 4 + 2" :x2="i * 4 + 2" :y1="72 - height / 2" :y2="72 + height / 2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
                 <PlaybackCursor v-if="playback" :playback="playback" />
               </svg>
               <span v-if="!bars.length" class="absolute inset-0 flex items-center justify-center text-xs text-muted">{{ previewBusy ? 'Rendering…' : 'Preview unavailable' }}</span>
             </div>
             </div>
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line bg-[#fcfdf9] p-2 sm:p-3">
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line bg-raised p-2 sm:px-3">
               <div class="flex flex-wrap items-center gap-2 lg:gap-3">
                 <button class="button-primary" :class="{ 'play-attention': playHint, 'keyboard-pressed': playPressed }" :disabled="starting" :aria-label="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" :title="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" @animationend="playHint = false" @click="togglePlayback"><AppIcon :name="playing ? 'stop' : 'play'" :size="18" /></button>
                 <button class="repeat-button px-4" :class="{ selected: loop, 'repeat-glow': repeatGlow }" :aria-pressed="loop" aria-label="Repeat song" :title="loop ? 'Repeat on' : 'Repeat off'" @animationend="repeatGlow = false" @click="loop = !loop"><AppIcon name="repeat" :size="18" /></button>
@@ -279,7 +313,7 @@ onBeforeUnmount(() => {
             <div class="space-y-3">
             <ControlGroup id="wave-controls" title="Wave" :expanded="expanded.wave" @toggle="expanded.wave = !expanded.wave">
             <fieldset>
-              <legend class="w-full text-sm font-medium" :class="{ 'mb-2': expanded.wave }"><span class="flex items-center justify-between">Wave shape<span class="flex items-center gap-1"><output v-if="!expanded.wave" class="value-readout" aria-label="Wave shape" data-parameter="shape">{{ settings.shape === 'saw' ? 'Sawtooth' : settings.shape === 'sine' ? 'Sine' : 'Square' }}</output><ParameterLock :locked="locks.shape" label="Wave shape" @toggle="locks.shape = !locks.shape" /></span></span></legend>
+              <legend class="w-full text-sm font-medium" :class="{ 'mb-2': expanded.wave }"><span class="flex items-center justify-between">Shape<span class="flex items-center gap-1"><output v-if="!expanded.wave" class="value-readout" aria-label="Shape" data-parameter="shape">{{ settings.shape === 'saw' ? 'Sawtooth' : settings.shape === 'sine' ? 'Sine' : 'Square' }}</output><ParameterLock :locked="locks.shape" label="Shape" @toggle="locks.shape = !locks.shape" /></span></span></legend>
               <div v-if="expanded.wave" class="grid grid-cols-3 gap-2">
                 <button v-for="shape in ['sine', 'square', 'saw']" :key="shape" class="shape-button" :class="{ selected: settings.shape === shape }" :aria-pressed="settings.shape === shape" @click="settings.shape = shape">
                   <svg viewBox="0 0 48 22" class="h-5 w-10" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path :d="shape === 'sine' ? 'M1 11C9-3 15-3 24 11S39 25 47 11' : shape === 'square' ? 'M1 18V4H24V18H47V4' : 'M1 18 23 4V18L47 4'" /></svg>
@@ -288,21 +322,21 @@ onBeforeUnmount(() => {
               </div>
             </fieldset>
             <div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
-              <RangeControl id="frequency" v-model="settings.frequency" label="Wave speed" :min="100" :max="8000" :step="10" unit="Hz" min-label="100 Hz" max-label="8 kHz" :locked="locks.frequency" :expanded="expanded.wave" @toggle-lock="locks.frequency = !locks.frequency" />
-              <RangeControl id="amplitude" v-model="settings.amplitude" label="Amplitude" :min="0" :max="1" :step="0.01" :scale="100" unit="%" :locked="locks.amplitude" :expanded="expanded.wave" @toggle-lock="locks.amplitude = !locks.amplitude" />
+              <RangeControl id="frequency" v-model="settings.frequency" label="Frequency" lock-label="Wave frequency" :min="300" :max="8000" :step="10" unit="Hz" :locked="locks.frequency" :expanded="expanded.wave" @toggle-lock="locks.frequency = !locks.frequency" />
+              <RangeControl id="amplitude" v-model="settings.amplitude" label="Amplitude" :min="MIN_AMPLITUDE" :max="1" step="any" unit="dB" :locked="locks.amplitude" :expanded="expanded.wave" @toggle-lock="locks.amplitude = !locks.amplitude" />
             </div>
             </ControlGroup>
             <ControlGroup id="vibrato-controls" title="Vibrato" caption="Pitch LFO" :expanded="expanded.vibrato" @toggle="expanded.vibrato = !expanded.vibrato">
-              <LfoVisualizer v-if="expanded.vibrato" id="vibrato-lfo" name="Vibrato" v-model:speed="settings.vibratoSpeed" v-model:depth="settings.vibratoDepth" :max-speed="40" :max-depth="1200" :depth-step="10" />
+              <LfoVisualizer v-if="expanded.vibrato" id="vibrato-lfo" name="Vibrato" v-model:frequency="settings.vibratoFrequency" v-model:depth="settings.vibratoDepth" :max-frequency="30" :max-depth="1200" :depth-step="10" />
               <div class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                <RangeControl id="vibrato-speed" v-model="settings.vibratoSpeed" label="Speed" lock-label="Vibrato speed" :min="0" :max="40" :step="0.1" unit="Hz" :locked="locks.vibratoSpeed" :expanded="expanded.vibrato" @toggle-lock="locks.vibratoSpeed = !locks.vibratoSpeed" />
+                <RangeControl id="vibrato-frequency" v-model="settings.vibratoFrequency" label="Frequency" lock-label="Vibrato frequency" :min="0" :max="30" :step="0.1" unit="Hz" :locked="locks.vibratoFrequency" :expanded="expanded.vibrato" @toggle-lock="locks.vibratoFrequency = !locks.vibratoFrequency" />
                 <RangeControl id="vibrato-depth" v-model="settings.vibratoDepth" label="Depth" lock-label="Vibrato depth" :min="0" :max="1200" :step="10" unit="cents" :locked="locks.vibratoDepth" :expanded="expanded.vibrato" @toggle-lock="locks.vibratoDepth = !locks.vibratoDepth" />
               </div>
             </ControlGroup>
             <ControlGroup id="tremolo-controls" title="Tremolo" caption="Volume LFO" :expanded="expanded.tremolo" @toggle="expanded.tremolo = !expanded.tremolo">
-              <LfoVisualizer v-if="expanded.tremolo" id="tremolo-lfo" name="Tremolo" v-model:speed="settings.tremoloSpeed" v-model:depth="settings.tremoloDepth" :max-speed="30" :max-depth="1" :depth-step="0.01" />
+              <LfoVisualizer v-if="expanded.tremolo" id="tremolo-lfo" name="Tremolo" v-model:frequency="settings.tremoloFrequency" v-model:depth="settings.tremoloDepth" :max-frequency="30" :max-depth="1" :depth-step="0.01" />
               <div class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                <RangeControl id="tremolo-speed" v-model="settings.tremoloSpeed" label="Speed" lock-label="Tremolo speed" :min="0" :max="30" :step="0.1" unit="Hz" :locked="locks.tremoloSpeed" :expanded="expanded.tremolo" @toggle-lock="locks.tremoloSpeed = !locks.tremoloSpeed" />
+                <RangeControl id="tremolo-frequency" v-model="settings.tremoloFrequency" label="Frequency" lock-label="Tremolo frequency" :min="0" :max="30" :step="0.1" unit="Hz" :locked="locks.tremoloFrequency" :expanded="expanded.tremolo" @toggle-lock="locks.tremoloFrequency = !locks.tremoloFrequency" />
                 <RangeControl id="tremolo-depth" v-model="settings.tremoloDepth" label="Depth" lock-label="Tremolo depth" :min="0" :max="1" :step="0.01" :scale="100" unit="%" :locked="locks.tremoloDepth" :expanded="expanded.tremolo" @toggle-lock="locks.tremoloDepth = !locks.tremoloDepth" />
               </div>
             </ControlGroup>
@@ -315,26 +349,25 @@ onBeforeUnmount(() => {
           <section class="panel space-y-2 p-2 sm:p-3" aria-labelledby="master-heading">
           <h2 id="master-heading" class="text-sm font-semibold leading-tight">Master</h2>
           <ControlGroup id="effects-controls" title="Effects" icon="filter" caption="Global" :expanded="expanded.effects" @toggle="expanded.effects = !expanded.effects">
-            <RangeControl id="cutoff" v-model="settings.cutoff" label="Low pass" lock-label="Cutoff" :min="200" :max="20000" :step="100" unit="Hz" min-label="200 Hz" max-label="20 kHz" :locked="locks.cutoff" :expanded="expanded.effects" @toggle-lock="locks.cutoff = !locks.cutoff" />
+            <RangeControl id="cutoff" v-model="settings.cutoff" label="Low pass" lock-label="Cutoff" :min="300" :max="15000" :step="100" unit="Hz" :locked="locks.cutoff" :expanded="expanded.effects" @toggle-lock="locks.cutoff = !locks.cutoff" />
             <div class="mt-3">
-              <RangeControl id="chorus" v-model="settings.chorus" label="Chorus" :min="0" :max="0.5" :step="0.01" :scale="100" unit="%" :locked="locks.chorus" :expanded="expanded.effects" @toggle-lock="locks.chorus = !locks.chorus" />
+              <RangeControl id="chorus" v-model="settings.chorus" label="Chorus" :min="0.3" :max="0.5" :step="0.01" :scale="100" unit="%" :locked="locks.chorus" :expanded="expanded.effects" @toggle-lock="locks.chorus = !locks.chorus" />
             </div>
           </ControlGroup>
           <ControlGroup id="timing-controls" title="Timing" icon="repeat" :expanded="expanded.timing" @toggle="expanded.timing = !expanded.timing">
-            <RangeControl id="duration" v-model="settings.duration" label="Chirp duration" :min="0.5" :max="2" :step="0.05" unit="s" :locked="locks.duration" :expanded="expanded.timing" @toggle-lock="locks.duration = !locks.duration" />
-            <p v-if="expanded.timing" class="mt-3 text-xs text-muted">Applies to the next play.</p>
+            <RangeControl id="duration" v-model="settings.duration" label="Duration" lock-label="Chirp duration" :min="0.5" :max="2" :step="0.05" unit="s" :locked="locks.duration" :expanded="expanded.timing" @toggle-lock="locks.duration = !locks.duration" />
             <div class="mt-3">
-              <RangeControl id="pause" v-model="settings.pause" label="Repeat pause" :min="0" :max="1" :step="0.05" unit="s" :locked="locks.pause" :expanded="expanded.timing" @toggle-lock="locks.pause = !locks.pause" />
+              <RangeControl id="pause" v-model="settings.pause" label="Pause" lock-label="Repeat pause" :min="0" :max="1" :step="0.05" unit="s" :locked="locks.pause" :expanded="expanded.timing" @toggle-lock="locks.pause = !locks.pause" />
             </div>
           </ControlGroup>
           </section>
           <p class="px-1 text-xs text-muted">Locks preserve parameters during randomization.</p>
         </aside>
       </div>
-      <p v-if="error" class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{{ error }}</p>
+      <p v-if="error" class="error-message mt-5 rounded-lg border p-4 text-sm" role="alert">{{ error }}</p>
     </main>
     <Teleport to="body">
-        <div v-if="reflection.visible.value" class="bird-reflection pointer-events-none fixed z-50 flex items-center justify-center rounded-full border border-line bg-white/90 p-1 shadow-lg" :style="reflection.style.value" aria-hidden="true">
+        <div v-if="reflection.visible.value" class="bird-reflection pointer-events-none fixed z-50 flex items-center justify-center rounded-full border border-line p-1 shadow-lg" :style="reflection.style.value" aria-hidden="true">
           <BirdPortrait ghost class="w-full opacity-80" :settings="settings" :singing="playing && !waiting" :repeat="loop" />
         </div>
     </Teleport>

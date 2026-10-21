@@ -17,8 +17,12 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   await expect(page.locator('svg[role="img"] line')).toHaveCount(180)
   await page.getByRole('button', { name: 'Square', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Square', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await setSlider(page, 'amplitude', 0)
-  await expect.poll(() => page.locator('svg[role="img"] line').evaluateAll(lines => lines.every(line => Number(line.getAttribute('y2')) - Number(line.getAttribute('y1')) === 1))).toBe(true)
+  await setSlider(page, 'amplitude', 10 ** (-10 / 20))
+  expect(Number(await page.locator('#amplitude').inputValue())).toBeCloseTo(10 ** (-10 / 20), 12)
+  await expect(page.locator('[data-parameter="amplitude"]')).toHaveText('-10 dB')
+  await expect(page.getByRole('slider', { name: 'Amplitude', exact: true })).toHaveAttribute('aria-valuetext', '-10 dB')
+  await setSlider(page, 'amplitude', 1)
+  await expect(page.locator('[data-parameter="amplitude"]')).toHaveText('0 dB')
   const presetSelect = page.getByRole('combobox', { name: 'Presets' })
   await expect(presetSelect.locator('option:not([disabled])')).toHaveCount(50)
   await expect(presetSelect).toHaveValue('')
@@ -47,10 +51,10 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   await expect(page.getByRole('button', { name: 'Unlock Chorus', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('output[data-parameter="frequency"]')).toHaveText(await page.evaluate(() => `${(2400).toLocaleString()} Hz`))
   await expect(page.locator('output[data-parameter="shape"]')).toHaveText('Sine')
-  await page.getByRole('button', { name: 'Lock Wave speed', exact: true }).click()
+  await page.getByRole('button', { name: 'Lock Wave frequency', exact: true }).click()
   await page.getByRole('button', { name: 'Randomize', exact: true }).click()
   await expect(page.locator('output[data-parameter="frequency"]')).toHaveText(await page.evaluate(() => `${(2400).toLocaleString()} Hz`))
-  await expect(page.getByRole('button', { name: 'Unlock Wave speed', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Unlock Wave frequency', exact: true })).toHaveAttribute('aria-pressed', 'true')
   const compactValues = await page.locator('output[data-parameter]').evaluateAll(outputs => Object.fromEntries(outputs.map(output => [output.dataset.parameter, output.textContent])))
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: test.info().outputPath('mobile-collapsed.png'), fullPage: true })
@@ -131,7 +135,7 @@ test('actual audio has working wave shapes, modulation, gain, filter, fades, and
     const silent = await render({ amplitude: 0 })
     const filtered = await render({ cutoff: 200 })
     const vibrato = await render({ vibratoDepth: 600 })
-    const tremolo = await render({ tremoloDepth: 1, tremoloSpeed: 10 })
+    const tremolo = await render({ tremoloDepth: 1, tremoloFrequency: 10 })
     const buffer = await renderSong(base)
     const wav = new DataView(await toWav(buffer).arrayBuffer())
     const chars = (from, count) => Array.from({ length: count }, (_, i) => String.fromCharCode(wav.getUint8(from + i))).join('')
@@ -184,9 +188,9 @@ test('randomization respects each parameter lock and the duration bounds', async
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
   const parameters = [
-    ['shape', 'Wave shape'], ['frequency', 'Wave speed'], ['amplitude', 'Amplitude'],
-    ['vibratoSpeed', 'Vibrato speed'], ['vibratoDepth', 'Vibrato depth'],
-    ['tremoloSpeed', 'Tremolo speed'], ['tremoloDepth', 'Tremolo depth'],
+    ['shape', 'Shape'], ['frequency', 'Wave frequency'], ['amplitude', 'Amplitude'],
+    ['vibratoFrequency', 'Vibrato frequency'], ['vibratoDepth', 'Vibrato depth'],
+    ['tremoloFrequency', 'Tremolo frequency'], ['tremoloDepth', 'Tremolo depth'],
     ['chorus', 'Chorus'], ['duration', 'Chirp duration'], ['cutoff', 'Cutoff'], ['pause', 'Repeat pause'],
   ]
   const values = () => page.evaluate(() => ({
@@ -227,11 +231,11 @@ test('LFO visualizers respond to sliders, pointer drag, touch, and keyboard', as
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
-  for (const [id, maxSpeed, maxDepth] of [['vibrato', 40, 1200], ['tremolo', 30, 1]]) {
+  for (const [id, maxFrequency, maxDepth] of [['vibrato', 30, 1200], ['tremolo', 30, 1]]) {
     const pad = page.locator(`#${id}-lfo`)
     const path = pad.locator('path').last()
     const initialPath = await path.getAttribute('d')
-    await setSlider(page, `${id}-speed`, 0)
+    await setSlider(page, `${id}-frequency`, 0)
     await setSlider(page, `${id}-depth`, 0)
     await expect(path).not.toHaveAttribute('d', initialPath)
     await pad.scrollIntoViewIfNeeded()
@@ -240,21 +244,21 @@ test('LFO visualizers respond to sliders, pointer drag, touch, and keyboard', as
     await page.mouse.down()
     await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5)
     await page.mouse.up()
-    await expect(page.locator(`#${id}-speed`)).toHaveValue(String(maxSpeed / 2))
+    await expect(page.locator(`#${id}-frequency`)).toHaveValue(String(maxFrequency / 2))
     await expect(page.locator(`#${id}-depth`)).toHaveValue(String(maxDepth / 2))
     await pad.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(page.locator(`#${id}-speed`)).toHaveValue(String(maxSpeed / 2 + 0.1))
+    await expect(page.locator(`#${id}-frequency`)).toHaveValue(String(maxFrequency / 2 + 0.1))
     await page.keyboard.press('ArrowUp')
     await expect(page.locator(`#${id}-depth`)).toHaveValue(String(maxDepth / 2 + (id === 'vibrato' ? 10 : 0.01)))
     await page.touchscreen.tap(box.x + box.width - 2, box.y + 2)
-    await expect(page.locator(`#${id}-speed`)).toHaveValue(String(maxSpeed))
+    await expect(page.locator(`#${id}-frequency`)).toHaveValue(String(maxFrequency))
     await expect(page.locator(`#${id}-depth`)).toHaveValue(String(maxDepth))
   }
 })
 })
 
-test('WAV export preserves both duration endpoints', async ({ page }) => {
+test('wet WAV export preserves both duration endpoints including the chorus tail', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
@@ -262,13 +266,13 @@ test('WAV export preserves both duration endpoints', async ({ page }) => {
     const { defaultSettings, renderSong, toWav } = await import('/src/audio.js')
     const results = []
     for (const duration of [0.5, 2]) {
-      const buffer = await renderSong({ ...defaultSettings, chorus: 0, duration })
+      const buffer = await renderSong({ ...defaultSettings, duration })
       results.push({ duration: buffer.duration, samples: buffer.length, wavSize: toWav(buffer).size })
     }
     return results
   })
   expect(lengths).toEqual([
-    { duration: 0.5, samples: 22050, wavSize: 88244 },
-    { duration: 2, samples: 88200, wavSize: 352844 },
+    { duration: 0.54, samples: 23814, wavSize: 95300 },
+    { duration: 2.04, samples: 89964, wavSize: 359900 },
   ])
 })
