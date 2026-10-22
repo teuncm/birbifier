@@ -1,5 +1,24 @@
 import { test, expect } from '@playwright/test'
 
+for (const width of [320, 375, 768, 1280]) {
+  test(`bird and presets share one responsive card at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 812 })
+    await page.goto('/')
+    const card = page.getByRole('region', { name: 'Your bird', exact: true })
+    const presets = card.getByRole('combobox', { name: 'Presets', exact: true })
+    const bird = card.getByRole('img', { name: 'Bird generated' })
+    await expect(presets).toBeVisible()
+    expect(await presets.evaluate(select => select.closest('.panel') === document.querySelector('[data-bird-perch]').closest('.panel'))).toBe(true)
+    const birdBox = await bird.boundingBox()
+    const presetsBox = await presets.boundingBox()
+    if (width < 1024) expect(birdBox.x + birdBox.width).toBeLessThanOrEqual(presetsBox.x)
+    else expect(presetsBox.y + presetsBox.height).toBeLessThanOrEqual(birdBox.y)
+    const shareBox = await card.getByRole('button', { name: 'Share bird', exact: true }).boundingBox()
+    expect(shareBox.y).toBeGreaterThanOrEqual(birdBox.y + birdBox.height)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
 for (const width of [1280, 375]) {
   test(`bird changes keep the page layout stable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 812 })

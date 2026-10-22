@@ -1,5 +1,59 @@
 import { test, expect } from '@playwright/test'
 
+test('resizing during flight uses transform scaling and feathers do not rerender the bird', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/')
+  const bird = page.getByRole('img', { name: 'Bird generated' })
+  const home = await bird.boundingBox()
+  const x = home.x + home.width / 2, y = home.y + home.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + 140, y + 100, { steps: 5 })
+  await page.mouse.up()
+  await bird.evaluate(async svg => {
+    await new Promise(requestAnimationFrame)
+    await new Promise(requestAnimationFrame)
+    const instance = svg.__vueParentComponent
+    const render = instance.render
+    window.flightMetrics = { renders: 0, sizeChanges: 0, maxFeathers: 0 }
+    instance.render = function (...args) { window.flightMetrics.renders++; return render.apply(this, args) }
+    const width = svg.style.width, height = svg.style.height
+    window.flightObserver = new MutationObserver(() => {
+      if (svg.style.width && (svg.style.width !== width || svg.style.height !== height)) window.flightMetrics.sizeChanges++
+      window.flightMetrics.maxFeathers = Math.max(window.flightMetrics.maxFeathers, document.querySelectorAll('.feather-particle').length)
+    })
+    window.flightObserver.observe(svg, { attributes: true, attributeFilter: ['style'] })
+  })
+  await page.setViewportSize({ width: 430, height: 812 })
+  await expect(bird).toHaveCSS('position', 'static')
+  const result = await page.evaluate(() => { window.flightObserver.disconnect(); return window.flightMetrics })
+  expect(result.sizeChanges).toBe(0)
+  expect(result.renders).toBeLessThanOrEqual(2)
+  expect(result.maxFeathers).toBeGreaterThan(3)
+  const frame = await bird.locator('..').boundingBox()
+  const landed = await bird.boundingBox()
+  for (const key of ['x', 'y', 'width', 'height']) expect(landed[key]).toBeCloseTo(frame[key], 1)
+  await expect(page.locator('.feather-particle')).toHaveCount(0)
+})
+
+test('a bird outside the viewport does not create invisible feather particles', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/')
+  const bird = page.getByRole('img', { name: 'Bird generated' })
+  const home = await bird.boundingBox()
+  const x = home.x + home.width / 2, y = home.y + home.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + 4000, y, { steps: 5 })
+  await page.mouse.up()
+  await expect(bird).toHaveClass(/bird-returning/)
+  await page.waitForTimeout(200)
+  expect((await bird.boundingBox()).x).toBeGreaterThan(375)
+  await expect(page.locator('.feather-particle')).toHaveCount(0)
+  await expect(bird).toHaveCSS('position', 'static')
+  expect((await bird.boundingBox()).x).toBeCloseTo(home.x, 1)
+})
+
 test('bird drags outside its card and glides home without moving the layout', async ({ page }) => {
   await page.goto('/')
   const bird = page.getByRole('img', { name: 'Bird generated' })

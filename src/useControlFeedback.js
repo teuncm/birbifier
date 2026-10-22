@@ -49,7 +49,7 @@ export function useControlFeedback() {
     void nextTick(() => { if (!disposed && element.isConnected) pulse(element) })
   }
   function input(event) {
-    if (event.target.matches?.('input[type="range"]')) pulse(event.target, 100)
+    if (event.target.matches?.('input[type="range"]') && !held(event.target)) pulse(event.target, 100)
   }
   function reset() {
     const elements = new Set([...pointers.values(), ...timers.keys()])

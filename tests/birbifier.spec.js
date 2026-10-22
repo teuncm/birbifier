@@ -13,7 +13,7 @@ test('controls, presets, waveform, export, and narrow mobile layout', async ({ p
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.getByRole('button', { name: 'Repeat song', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Birdsong synthesizer')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Birbifier')
   await expect(page.locator('svg[role="img"] line')).toHaveCount(180)
   await page.getByRole('button', { name: 'Square', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Square', exact: true })).toHaveAttribute('aria-pressed', 'true')

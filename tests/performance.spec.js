@@ -1,5 +1,116 @@
 import { test, expect } from '@playwright/test'
 
+test('parameter edits reuse bird visibility without forcing layout', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
+  await expect(page.locator('.waveform-display')).toHaveAttribute('aria-busy', 'false')
+  const reads = await page.evaluate(async () => {
+    const { nextTick } = await import('/node_modules/.vite/deps/vue.js')
+    await new Promise(requestAnimationFrame)
+    await new Promise(requestAnimationFrame)
+    const original = Element.prototype.getBoundingClientRect
+    let reads = 0
+    Element.prototype.getBoundingClientRect = function () { reads++; return original.call(this) }
+    try {
+      const input = document.getElementById('frequency')
+      for (let i = 0; i < 25; i++) {
+        input.value = 1230 + i * 10
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        await nextTick()
+      }
+      return reads
+    } finally { Element.prototype.getBoundingClientRect = original }
+  })
+  expect(reads).toBe(0)
+  await expect(page.locator('.bird-reflection')).toHaveCount(0)
+})
+
+test('hidden previews defer audio work while exports and returning previews use the latest settings', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 500 })
+  await page.addInitScript(() => {
+    const Original = window.OfflineAudioContext
+    window.previewRenders = 0
+    window.OfflineAudioContext = class extends Original {
+      constructor(...args) { super(...args); window.previewRenders++ }
+    }
+  })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
+  await expect(page.locator('.waveform-display')).toHaveAttribute('aria-busy', 'false')
+  await page.locator('#duration').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(150)
+  const before = await page.evaluate(() => window.previewRenders)
+  for (const duration of [0.55, 0.6, 0.75]) {
+    await page.locator('#duration').fill(String(duration))
+    await page.waitForTimeout(150)
+  }
+  expect(await page.evaluate(() => window.previewRenders)).toBe(before)
+  const pendingDownload = page.waitForEvent('download')
+  // Keep the playback panel off-screen while requesting the export.
+  await page.getByRole('button', { name: 'Download (WAV)', exact: true }).evaluate(button => button.click())
+  const download = await pendingDownload
+  const chunks = []
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk)
+  expect(Buffer.concat(chunks).readUInt32LE(40)).toBe(Math.ceil((0.75 + 0.04) * 44100) * 4)
+  expect(await page.evaluate(() => window.previewRenders)).toBe(before + 1)
+  const expectedHeights = await page.evaluate(async () => {
+    const { renderSong, defaultSettings } = await import('/src/audio.js')
+    const { buildWaveform } = await import('/src/waveform.js')
+    return buildWaveform(await renderSong({ ...defaultSettings, duration: 0.75 })).map(height => String(72 - height / 2))
+  })
+  await page.locator('.waveform-display').scrollIntoViewIfNeeded()
+  await expect.poll(() => page.locator('.waveform-display svg g line').evaluateAll(lines => lines.map(line => line.getAttribute('y1')))).toEqual(expectedHeights)
+  expect(await page.evaluate(() => window.previewRenders)).toBe(before + 1)
+})
+
+test('off-screen bird animations pause and resume when scrolled into view', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 740 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
+  await page.locator('#duration').fill('2')
+  await page.getByRole('button', { name: 'Play song', exact: true }).click()
+  const bird = page.getByRole('img', { name: 'Bird generated' })
+  await page.locator('#duration').scrollIntoViewIfNeeded()
+  for (const part of ['beak', 'wing', 'tail', 'body']) {
+    await expect(bird.locator(`[data-${part}]`)).toHaveCSS('animation-play-state', 'paused', { timeout: 1000 })
+  }
+  await expect(bird).toHaveAttribute('data-singing', 'true')
+  await bird.scrollIntoViewIfNeeded()
+  for (const part of ['beak', 'wing', 'tail', 'body']) {
+    await expect(bird.locator(`[data-${part}]`)).toHaveCSS('animation-play-state', 'running')
+  }
+  await page.getByRole('button', { name: 'Stop song', exact: true }).click()
+})
+
+test('held sliders keep orange feedback without restarting a timer on every input', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.waveform-display')).toHaveAttribute('aria-busy', 'false')
+  const result = await page.evaluate(async () => {
+    const { nextTick } = await import('/node_modules/.vite/deps/vue.js')
+    const original = window.setTimeout
+    let timers = 0
+    window.setTimeout = function (callback, delay, ...args) {
+      if (delay === 100) timers++
+      return original.call(this, callback, delay, ...args)
+    }
+    const input = document.getElementById('frequency')
+    try {
+      input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, button: 0 }))
+      for (let i = 0; i < 100; i++) {
+        input.value = 1230 + i * 10
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      await nextTick()
+      return { timers, active: input.classList.contains('is-interacting') }
+    } finally {
+      window.setTimeout = original
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }))
+    }
+  })
+  expect(result.active).toBe(true)
+  expect(result.timers).toBeLessThanOrEqual(1)
+})
+
 test('depth edits reuse the LFO path and transform its amplitude', async ({ page }) => {
   await page.goto('/')
   const result = await page.evaluate(async () => {
@@ -64,7 +175,7 @@ test('natural playback completion stops the chorus control source', async ({ pag
 })
 
 test('off-screen waveform cursor pauses DOM writes and catches up when visible', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 700 })
+  await page.setViewportSize({ width: 1280, height: 500 })
   await page.goto('/')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.locator('#duration').evaluate(input => { input.value = 2; input.dispatchEvent(new Event('input', { bubbles: true })) })

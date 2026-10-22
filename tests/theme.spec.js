@@ -32,7 +32,7 @@ test('theme toggle works on mobile when storage is unavailable', async ({ page }
   await page.getByRole('button', { name: 'Switch to light theme' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.getByRole('button', { name: 'Switch to dark theme' }).click()
-  await expect(page.locator('.waveform-display')).toHaveCSS('height', '64px')
+  await expect(page.locator('.waveform-display')).toHaveCSS('height', '32px')
   await expect(page.locator('.waveform-display svg line')).toHaveCount(180)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/theme-dark-mobile.png', fullPage: true, animations: 'disabled' })

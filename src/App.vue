@@ -13,11 +13,14 @@ import { MIN_AMPLITUDE, randomizeSettings } from './randomize.js'
 import { buildWaveform } from './waveform.js'
 import { useBirdReflection } from './useBirdReflection.js'
 import { useControlFeedback } from './useControlFeedback.js'
+import { decodeBird } from './share.js'
 
 useControlFeedback()
 
-const initialPresetIndex = Math.floor(Math.random() * presets.length)
-const settings = reactive({ ...presets[initialPresetIndex].settings })
+const sharedBird = decodeBird(new URLSearchParams(window.location.search).get('p'))
+const sharedPresetIndex = sharedBird ? presets.findIndex(preset => Object.keys(preset.settings).every(key => preset.settings[key] === sharedBird.settings[key])) : -1
+const initialPresetIndex = sharedBird ? Math.max(0, sharedPresetIndex) : Math.floor(Math.random() * presets.length)
+const settings = reactive({ ...(sharedBird?.settings || presets[initialPresetIndex].settings) })
 const mainBird = ref(null)
 const theme = ref(document.documentElement.dataset.theme || 'dark')
 const deviceTheme = window.matchMedia('(prefers-color-scheme: dark)')
@@ -44,7 +47,7 @@ const expanded = reactive({ wave: true, vibrato: true, tremolo: true, timing: tr
 const anyExpanded = computed(() => Object.values(expanded).some(Boolean))
 const playing = ref(false)
 const starting = ref(false)
-const loop = ref(true)
+const loop = ref(sharedBird?.repeat ?? true)
 const repeatGlow = ref(false)
 const playHint = ref(true)
 const waiting = ref(false)
@@ -58,9 +61,13 @@ let downloadPressTimer
 let playPressTimer
 const playback = shallowRef(null)
 const bars = shallowRef([])
+const waveformDisplay = ref(null)
+let previewObserver, previewVisible = true
 const previewBusy = ref(false)
+const settingKeys = Object.keys(defaultSettings)
+const presetNames = new Map(presets.map(preset => [JSON.stringify(settingKeys.map(key => preset.settings[key])), preset.name]))
 const activePreset = computed({
-  get: () => presets.find(preset => Object.keys(settings).every(key => settings[key] === preset.settings[key]))?.name || '',
+  get: () => presetNames.get(JSON.stringify(settingKeys.map(key => settings[key]))) || '',
   set: name => {
     const preset = presets.find(preset => preset.name === name)
     if (preset) applyPreset(preset)
@@ -117,7 +124,11 @@ function stopForBackground() {
   void previousContext?.close().catch(() => {})
 }
 function visibilityChanged() {
-  if (document.hidden) stopForBackground()
+  if (document.hidden) {
+    stopForBackground()
+    clearTimeout(previewTimer)
+    previewTimer = undefined
+  } else if (previewQueued && previewVisible) void updatePreview()
 }
 function scheduleRepeat() {
   clearTimeout(repeatTimer)
@@ -218,7 +229,7 @@ async function updatePreview() {
   if (disposed) return
   // Offline rendering cannot be cancelled. Keep at most one preview in flight,
   // then render the latest settings instead of every intermediate drag position.
-  if (previewRunning) { previewQueued = true; return }
+  if (previewRunning || !previewVisible || document.hidden) { previewQueued = true; return }
   previewRunning = true
   previewQueued = false
   const version = ++previewVersion
@@ -231,8 +242,7 @@ async function updatePreview() {
   finally {
     previewRunning = false
     if (version === previewVersion) previewBusy.value = false
-    if (previewQueued && !disposed) {
-      clearTimeout(previewTimer)
+    if (previewQueued && previewTimer === undefined && !disposed && previewVisible && !document.hidden) {
       void updatePreview()
     }
   }
@@ -257,8 +267,13 @@ watch(() => soundKeys.map(key => settings[key]), () => {
   else updateMasterEffects(context, settings)
   // Invalidate in-flight renders, then debounce work while dragging.
   previewVersion++
+  previewQueued = true
   clearTimeout(previewTimer)
-  previewTimer = setTimeout(updatePreview, 100)
+  previewTimer = undefined
+  if (previewVisible && !document.hidden) previewTimer = setTimeout(() => {
+    previewTimer = undefined
+    void updatePreview()
+  }, 100)
 })
 watch(() => settings.pause, () => { if (waiting.value) scheduleRepeat() })
 watch(loop, enabled => {
@@ -274,6 +289,18 @@ onMounted(() => {
   window.addEventListener('blur', stopForBackground)
   window.addEventListener('pagehide', stopForBackground)
   document.addEventListener('freeze', stopForBackground)
+  previewObserver = new IntersectionObserver(([entry]) => {
+    previewVisible = entry.isIntersecting
+    if (!previewVisible) {
+      clearTimeout(previewTimer)
+      previewTimer = undefined
+    } else if (previewQueued) {
+      clearTimeout(previewTimer)
+      previewTimer = undefined
+      void updatePreview()
+    }
+  })
+  previewObserver.observe(waveformDisplay.value)
   void updatePreview()
 })
 onBeforeUnmount(() => {
@@ -288,6 +315,7 @@ onBeforeUnmount(() => {
   disposed = true
   previewVersion++
   clearTimeout(previewTimer)
+  previewObserver?.disconnect()
   stop()
   void context?.close()
 })
@@ -295,41 +323,40 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mx-auto max-w-[1160px] px-2 sm:px-5 lg:px-8">
-    <header class="flex h-16 items-center justify-between border-b border-line-subtle">
-      <a href="./" class="flex items-center gap-3 text-xl font-bold tracking-tight" aria-label="Birbifier home">
+    <header class="flex h-16 items-center justify-between">
+      <h1><a href="./" class="flex items-center gap-3 text-xl font-bold tracking-tight" aria-label="Birbifier home">
         <img src="/birb.svg" width="38" height="38" alt="" />Birbifier
-      </a>
+      </a></h1>
       <div class="flex items-center gap-3">
         <a href="https://teuncm.nl/" class="text-sm font-medium text-muted hover:text-moss hover:underline" aria-label="Teun M. — teuncm.nl">Teun M. ↗</a>
         <button class="icon-button h-8 w-8" :aria-label="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" :title="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" @click="toggleTheme"><AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="17" /></button>
       </div>
     </header>
-    <main class="py-4 lg:py-6" @pointerdown.capture="reflection.rememberControl" @keydown.capture="reflection.rememberControl" @input.capture="reflection.rememberControl" @change.capture="reflection.rememberControl">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-3xl font-semibold tracking-tight">Birdsong synthesizer</h1>
-        <div class="flex flex-wrap items-center gap-2">
+    <main class="app-main pb-4 pt-2 lg:pb-6 lg:pt-3" @pointerdown.capture="reflection.rememberControl" @keydown.capture="reflection.rememberControl" @input.capture="reflection.rememberControl" @change.capture="reflection.rememberControl">
+      <div class="mb-3 flex flex-wrap items-center gap-2">
           <button class="button-secondary" :disabled="allLocked" title="Randomize unlocked parameters" @click="randomize"><AppIcon name="dice" :size="16" />Randomize</button>
           <button class="button-secondary reset-button" @click="resetSound"><AppIcon name="reset" :size="16" />Reset</button>
           <button class="button-secondary" :aria-expanded="anyExpanded" aria-controls="wave-controls vibrato-controls tremolo-controls timing-controls effects-controls" @click="toggleAllControls"><AppIcon :name="anyExpanded ? 'up' : 'down'" :size="16" />{{ anyExpanded ? 'Collapse' : 'Expand' }}</button>
-        </div>
       </div>
-      <div class="grid grid-cols-2 items-start gap-2 sm:gap-3 lg:grid-cols-[1fr_320px] lg:grid-rows-[auto_auto_1fr]">
-        <div class="contents lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:block lg:min-w-0 lg:space-y-3">
-          <section class="panel col-span-2 row-start-2 overflow-hidden" aria-labelledby="preview-heading">
+      <div class="grid grid-cols-2 items-start gap-2 sm:gap-3 lg:grid-cols-[1fr_320px] lg:grid-rows-[auto_1fr]">
+        <div class="contents lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:block lg:min-w-0 lg:space-y-3">
+          <section class="playback-player panel overflow-hidden" aria-labelledby="preview-heading">
             <div class="min-w-0">
-            <div class="flex items-center justify-between px-2 pt-1 sm:px-3">
+            <div class="hidden items-center justify-between px-3 pt-1 lg:flex">
               <h2 id="preview-heading" class="flex min-h-7 items-center text-sm font-semibold leading-tight">Playback</h2>
             </div>
-            <div class="waveform-display relative mx-2 mt-1 h-16 overflow-hidden rounded-lg bg-inset sm:mx-3 lg:h-20" :aria-busy="previewBusy">
+            <div ref="waveformDisplay" class="waveform-display relative mx-2 mt-2 h-8 overflow-hidden rounded-lg bg-inset lg:mx-3 lg:mt-1 lg:h-20" :aria-busy="previewBusy">
               <svg viewBox="0 0 720 144" preserveAspectRatio="none" class="h-full w-full" role="img" aria-label="Waveform preview of the current song">
                 <desc>Bar height shows the strongest peak from either stereo channel.</desc>
-                <line v-for="(height, i) in bars" :key="i" :x1="i * 4 + 2" :x2="i * 4 + 2" :y1="72 - height / 2" :y2="72 + height / 2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+                <g v-memo="[bars]">
+                  <line v-for="(height, i) in bars" :key="i" :x1="i * 4 + 2" :x2="i * 4 + 2" :y1="72 - height / 2" :y2="72 + height / 2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+                </g>
                 <PlaybackCursor v-if="playback" :playback="playback" />
               </svg>
               <span v-if="!bars.length" class="absolute inset-0 flex items-center justify-center text-xs text-muted">{{ previewBusy ? 'Rendering…' : 'Preview unavailable' }}</span>
             </div>
             </div>
-            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle bg-surface p-2 sm:px-3">
+            <div class="playback-controls mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle bg-surface p-2 sm:px-3" role="group" aria-label="Playback controls">
               <div class="flex flex-wrap items-center gap-2 lg:gap-3">
                 <button class="button-primary" :class="{ 'play-attention': playHint, 'keyboard-pressed': playPressed }" :disabled="starting" :aria-label="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" :title="starting ? 'Starting…' : playing ? 'Stop song' : 'Play song'" @animationend="playHint = false" @click="togglePlayback"><AppIcon :name="playing ? 'stop' : 'play'" :size="18" /></button>
                 <button class="repeat-button px-4" :class="{ selected: loop, 'repeat-glow': repeatGlow }" :aria-pressed="loop" aria-label="Repeat song" :title="loop ? 'Repeat on' : 'Repeat off'" @animationend="repeatGlow = false" @click="loop = !loop"><AppIcon name="repeat" :size="18" /></button>
@@ -338,7 +365,7 @@ onBeforeUnmount(() => {
               <span class="flex items-center gap-2 text-xs text-muted" role="status" aria-label="Playback status"><span class="h-1.5 w-1.5 rounded-full" :class="playing ? 'bg-moss' : 'bg-[#9ba88f]'"></span>{{ waiting ? 'Pause' : playing ? 'Playing' : 'Ready' }}</span>
             </div>
           </section>
-          <section class="panel col-span-2 row-start-3 p-2 sm:p-3" aria-labelledby="synth-heading">
+          <section class="panel col-span-2 row-start-2 p-2 sm:p-3" aria-labelledby="synth-heading">
             <h2 id="synth-heading" class="mb-2 text-sm font-semibold leading-tight">Synth</h2>
             <div class="space-y-3">
             <ControlGroup id="wave-controls" title="Wave" :expanded="expanded.wave" @toggle="expanded.wave = !expanded.wave">
@@ -373,9 +400,12 @@ onBeforeUnmount(() => {
             </div>
           </section>
         </div>
-        <PresetSelector ref="presetSelector" class="col-start-2 row-start-1" v-model="activePreset" :presets="presets" @previous="browsePreset(-1)" @next="browsePreset(1)" />
-        <BirdPortrait ref="mainBird" class="col-start-1 row-start-1 lg:col-start-2 lg:row-start-2" :settings="settings" :singing="playing && !waiting" :repeat="loop" />
-        <aside class="col-span-2 row-start-4 space-y-3 lg:col-span-1 lg:col-start-2 lg:row-start-3">
+        <BirdPortrait ref="mainBird" class="col-span-2 row-start-1 lg:col-span-1 lg:col-start-2" :settings="settings" :singing="playing && !waiting" :repeat="loop" :in-view="reflection.birdVisible.value">
+          <template #presets>
+            <PresetSelector ref="presetSelector" embedded v-model="activePreset" :presets="presets" @previous="browsePreset(-1)" @next="browsePreset(1)" />
+          </template>
+        </BirdPortrait>
+        <aside class="col-span-2 row-start-3 space-y-3 lg:col-span-1 lg:col-start-2 lg:row-start-2">
           <section class="panel space-y-2 p-2 sm:p-3" aria-labelledby="master-heading">
           <h2 id="master-heading" class="text-sm font-semibold leading-tight">Master</h2>
           <ControlGroup id="effects-controls" title="Effects" caption="Global" :expanded="expanded.effects" @toggle="expanded.effects = !expanded.effects">
@@ -392,6 +422,7 @@ onBeforeUnmount(() => {
           </ControlGroup>
           </section>
           <p class="px-1 text-xs text-muted">Locks preserve parameters during randomization.</p>
+          <p class="px-1 text-xs text-muted">Inspired by <a href="https://github.com/KilledByAPixel/ZzFX" class="underline decoration-line underline-offset-2 hover:text-moss">ZzFX</a>.</p>
         </aside>
       </div>
       <p v-if="error" class="error-message mt-5 rounded-lg border p-4 text-sm" role="alert">{{ error }}</p>

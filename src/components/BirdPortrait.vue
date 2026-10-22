@@ -1,13 +1,21 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 import AppIcon from './AppIcon.vue'
+import FeatherTrail from './FeatherTrail.vue'
+import { birdShareUrl } from '../share.js'
 
-const props = defineProps({ settings: { type: Object, required: true }, singing: Boolean, ghost: Boolean, repeat: Boolean })
+const props = defineProps({ settings: { type: Object, required: true }, singing: Boolean, ghost: Boolean, repeat: Boolean, inView: { type: Boolean, default: true } })
 const headingId = useId()
 const clipId = useId()
 const portrait = ref(null)
 const portraitFrame = ref(null)
+const sharing = ref(false)
+const copied = ref(false)
+const shareLink = ref('')
+const shareInput = ref(null)
+let shareTimer
 let flight = null
+const landingKeys = ['left', 'top', 'width', 'height']
 const airborne = ref(false)
 const facing = ref(null)
 const gaze = ref(null)
@@ -22,33 +30,18 @@ function readHome() {
 }
 function paintFlight() {
   const style = portrait.value.style
-  style.transform = `translate3d(${flight.x.toFixed(2)}px, ${flight.y.toFixed(2)}px, 0)`
-  const width = `${flight.width.toFixed(2)}px`, height = `${flight.height.toFixed(2)}px`
-  if (style.width !== width) style.width = width
-  if (style.height !== height) style.height = height
+  style.transform = `translate3d(${flight.x.toFixed(2)}px, ${flight.y.toFixed(2)}px, 0) scale(${(flight.width / flight.baseWidth).toFixed(5)}, ${(flight.height / flight.baseHeight).toFixed(5)})`
 }
 const returning = ref(false)
 let facingLeft = false, lookAngle = 0
-const feathers = ref([])
-const featherTimers = new Map()
-let featherId = 0
-function removeFeather(id) {
-  clearTimeout(featherTimers.get(id))
-  featherTimers.delete(id)
-  feathers.value = feathers.value.filter(feather => feather.id !== id)
-}
+const featherTrail = ref(null)
 function dropFeather() {
-  if (feathers.value.length >= 16) removeFeather(feathers.value[0].id)
-  const id = ++featherId
-  feathers.value.push({
-    id, x: flight.left + flight.x + flight.width * 0.45,
+  featherTrail.value?.drop({
+    x: flight.left + flight.x + flight.width * 0.45,
     y: flight.top + flight.y + flight.height * 0.6,
     size: Math.max(8, Math.min(14, flight.width * 0.04)),
     color: bird.value.body, vein: bird.value.wing,
-    drift: `${(id % 2 ? 1 : -1) * (14 + id % 4 * 6)}px`,
-    turn: `${(id % 2 ? 1 : -1) * (65 + id % 3 * 25)}deg`,
   })
-  featherTimers.set(id, setTimeout(() => removeFeather(id), 1400))
 }
 let pointerId = null, grabX = 0, grabY = 0, returnFrame
 let pointerSamples = []
@@ -71,18 +64,19 @@ function startDrag(event) {
   if (props.ghost || event.button !== 0 || pointerId !== null) return
   event.preventDefault()
   const rect = portrait.value.getBoundingClientRect()
+  homeDirty = true
+  const home = readHome()
   cancelAnimationFrame(returnFrame)
   returning.value = false
   airborne.value = true
-  homeDirty = true
-  flight = { left: rect.left, top: rect.top, width: rect.width, height: rect.height, x: 0, y: 0 }
-  Object.assign(portrait.value.style, { position: 'fixed', left: `${rect.left}px`, top: `${rect.top}px`, zIndex: '60', willChange: 'transform' })
+  flight = { left: rect.left, top: rect.top, width: rect.width, height: rect.height, baseWidth: rect.width, baseHeight: rect.height, x: 0, y: 0 }
+  Object.assign(portrait.value.style, { position: 'fixed', left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px`, transformOrigin: '0 0', zIndex: '60', willChange: 'transform' })
   paintFlight()
   grabX = event.clientX
   grabY = event.clientY
   pointerId = event.pointerId
   pointerSamples = [{ x: event.clientX, y: event.clientY, time: event.timeStamp }]
-  lookHome(readHome())
+  lookHome(home)
   portrait.value.setPointerCapture(pointerId)
 }
 function drag(event) {
@@ -116,7 +110,6 @@ function release(event) {
   if (event.type === 'pointerup') drag(event)
   cancelAnimationFrame(dragFrame)
   dragFrame = undefined
-  paintFlight()
   const first = pointerSamples[0], last = pointerSamples.at(-1)
   const elapsed = Math.max(16, last.time - first.time)
   const fresh = event.type === 'pointerup' && event.timeStamp - lastMovedAt < 100
@@ -127,6 +120,7 @@ function release(event) {
   pointerId = null
   homeDirty = true
   const home = readHome()
+  paintFlight()
   returning.value = true
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return finishReturn()
   const start = { x: flight.x, y: flight.y }
@@ -145,25 +139,30 @@ function release(event) {
     // Refresh cached geometry after scrolling, resizing, or layout changes.
     const target = readHome()
     // Chase a moving perch smoothly instead of jumping when the page scrolls.
-    const follow = 1 - Math.exp(-(now - lastFrame) / 70)
+    let settled = true
+    if (landingKeys.some(key => landing[key] !== target[key])) {
+      const follow = 1 - Math.exp(-(now - lastFrame) / 70)
+      for (const key of landingKeys) {
+        const delta = target[key] - landing[key]
+        landing[key] = Math.abs(delta) < 0.1 ? target[key] : landing[key] + delta * follow
+        if (Math.abs(landing[key] - target[key]) >= 0.1) settled = false
+      }
+    }
     lastFrame = now
-    for (const key of ['left', 'top', 'width', 'height']) landing[key] += (target[key] - landing[key]) * follow
     const t = progress * progress * (3 - 2 * progress)
     const curve = 16 * progress ** 2 * (1 - progress) ** 2
     const momentum = (now - startedAt) * Math.exp(-(now - startedAt) / 220) * (1 - progress) ** 2
-    Object.assign(flight, {
-      x: start.x + (landing.left - flight.left - start.x) * t + vx * momentum + arcX * curve,
-      y: start.y + (landing.top - flight.top - start.y) * t + vy * momentum + arcY * curve,
-      width: flight.width + (landing.width - flight.width) * t,
-      height: flight.height + (landing.height - flight.height) * t,
-    })
+    flight.x = start.x + (landing.left - flight.left - start.x) * t + vx * momentum + arcX * curve
+    flight.y = start.y + (landing.top - flight.top - start.y) * t + vy * momentum + arcY * curve
+    flight.width += (landing.width - flight.width) * t
+    flight.height += (landing.height - flight.height) * t
     lookHome(target)
     paintFlight()
-    if (distance > 4 && progress < 0.95 && now - lastFeather >= 140) {
+    const left = flight.left + flight.x, top = flight.top + flight.y
+    if (distance > 4 && progress < 0.95 && now - lastFeather >= 140 && left < window.innerWidth && left + flight.width > 0 && top < window.innerHeight && top + flight.height > 0) {
       dropFeather()
       lastFeather = now
     }
-    const settled = ['left', 'top', 'width', 'height'].every(key => Math.abs(landing[key] - target[key]) < 0.1)
     if (progress < 1 || !settled) returnFrame = requestAnimationFrame(fly)
     else finishReturn()
   }
@@ -178,12 +177,12 @@ onMounted(() => {
   geometryObserver.observe(document.body)
 })
 onBeforeUnmount(() => {
+  clearTimeout(shareTimer)
   cancelAnimationFrame(returnFrame)
   cancelAnimationFrame(dragFrame)
   geometryObserver?.disconnect()
   window.removeEventListener('scroll', invalidateHome, true)
   window.removeEventListener('resize', invalidateHome)
-  for (const timer of featherTimers.values()) clearTimeout(timer)
 })
 const bird = computed(() => {
   const s = props.settings
@@ -260,17 +259,46 @@ function downloadBird() {
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+
+async function shareBird() {
+  if (sharing.value) return
+  sharing.value = true
+  shareLink.value = ''
+  const url = birdShareUrl(props.settings, props.repeat, window.location.href)
+  try {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Birbifier', url })
+        return
+      } catch (cause) {
+        if (cause.name === 'AbortError') return
+      }
+    }
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(url)
+      copied.value = true
+      clearTimeout(shareTimer)
+      shareTimer = setTimeout(() => { copied.value = false }, 1800)
+    } catch {
+      shareLink.value = url
+      await nextTick()
+      shareInput.value?.focus()
+      shareInput.value?.select()
+    }
+  } finally { sharing.value = false }
+}
 </script>
 
 <template>
   <section :class="ghost ? 'overflow-hidden' : 'panel overflow-hidden'" :aria-labelledby="ghost ? undefined : headingId">
-    <div v-if="!ghost" class="flex min-h-7 items-center justify-between gap-2 px-2 pt-1">
+    <div v-if="!ghost" class="flex min-h-7 items-center px-2 pt-1">
       <h2 :id="headingId" class="text-sm font-semibold leading-tight">Your bird</h2>
-      <button class="icon-button h-7 w-7 border-0" aria-label="Download bird SVG" title="Download bird SVG" @click="downloadBird"><AppIcon name="download" :size="16" /></button>
     </div>
+    <div :class="$slots.presets ? 'grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-center gap-1 px-1 lg:flex lg:flex-col lg:gap-0 lg:px-0' : undefined">
     <!-- Reserve the portrait's space while it flies outside the card. -->
-    <div ref="portraitFrame" class="aspect-[23/20] w-full">
-    <svg ref="portrait" xmlns="http://www.w3.org/2000/svg" :viewBox="bird.viewBox" class="block h-full w-full" :class="{ 'bird-draggable': !ghost, 'bird-returning': returning, 'bird-airborne': airborne }" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing" @pointerdown="startDrag" @pointermove="drag" @pointerup="release" @pointercancel="release" @lostpointercapture="release">
+    <div ref="portraitFrame" data-bird-perch class="aspect-[23/20] min-h-0 w-full shrink-0" :class="{ 'min-w-0 lg:order-2': $slots.presets }">
+    <svg ref="portrait" v-memo="[bird, singing, repeat, returning, airborne, inView]" xmlns="http://www.w3.org/2000/svg" :viewBox="bird.viewBox" class="block h-full w-full" :class="{ 'bird-draggable': !ghost, 'bird-returning': returning, 'bird-airborne': airborne, 'bird-offscreen': !inView && !airborne }" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing" @pointerdown="startDrag" @pointermove="drag" @pointerup="release" @pointercancel="release" @lostpointercapture="release">
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
       <g ref="facing" data-facing>
       <ellipse data-ground cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
@@ -307,7 +335,7 @@ function downloadBird() {
       <ellipse cx="199" cy="120" rx="7" ry="4" :fill="bird.accent" />
       <circle v-if="repeat" data-face-mark cx="189" cy="112" r="1.5" :fill="bird.wing" opacity="0.65" />
       <path :d="`M219 104l${bird.beak} 11-${bird.beak} 5Z`" fill="#dc9c3b" />
-      <g data-beak :style="singing ? { transformOrigin: '219px 120px', animation: `bird-chirp ${bird.beat} ease-in-out infinite alternate` } : undefined">
+      <g data-beak :style="{ '--chirp-beat': bird.beat }">
         <path :d="`M219 120l${bird.beak} -5-${bird.beak} 17Z`" fill="#bf792d" />
       </g>
       </g>
@@ -317,22 +345,23 @@ function downloadBird() {
       </g>
     </svg>
     </div>
-    <Teleport v-if="!ghost" to="body">
-      <svg v-for="feather in feathers" :key="feather.id" class="feather-particle pointer-events-none fixed z-50" viewBox="0 0 16 24" :width="feather.size" :height="feather.size * 1.5" :style="{ left: `${feather.x}px`, top: `${feather.y}px`, '--feather-drift': feather.drift, '--feather-turn': feather.turn }" aria-hidden="true" @animationend="removeFeather(feather.id)">
-        <path d="M3 20C-3 9 8-2 13 1c7 6-1 18-10 19Z" :fill="feather.color" />
-        <path d="M2 23 11 5M5 16l5-1M7 11l-1-4" fill="none" :stroke="feather.vein" stroke-width="1" stroke-linecap="round" />
-      </svg>
-    </Teleport>
+    <div v-if="$slots.presets" class="min-w-0 px-1 pb-2 lg:order-1 lg:w-full lg:px-3 lg:pb-0">
+      <slot name="presets" />
+    </div>
+    </div>
+    <div v-if="!ghost" class="border-t border-line-subtle bg-surface p-2 sm:px-3">
+      <div class="flex items-center justify-between gap-2">
+        <button class="button-secondary px-3" aria-label="Share bird" :title="copied ? 'Link copied' : 'Share bird'" :disabled="sharing" @click="shareBird"><AppIcon :name="copied ? 'check' : 'share'" :size="16" />{{ copied ? 'Copied' : 'Share' }}</button>
+        <button class="icon-button h-9 w-9" aria-label="Download bird SVG" title="Download bird SVG" @click="downloadBird"><AppIcon name="download" :size="16" /></button>
+      </div>
+      <span role="status" class="sr-only">{{ copied ? 'Bird link copied' : '' }}</span>
+      <input v-if="shareLink" ref="shareInput" :value="shareLink" aria-label="Bird share link" readonly class="mt-2 w-full min-w-0 select-text rounded border border-line bg-inset p-1 text-xs" @focus="$event.target.select()" />
+    </div>
+    <FeatherTrail v-if="!ghost" ref="featherTrail" />
   </section>
 </template>
 
 <style>
-.feather-particle { animation: feather-fall 1200ms ease-out forwards; }
-@keyframes feather-fall {
-  0% { opacity: 0.8; transform: translate(0, 0) rotate(-15deg); }
-  45% { opacity: 0.65; }
-  100% { opacity: 0; transform: translate(var(--feather-drift), 65px) rotate(var(--feather-turn)); }
-}
 .bird-draggable { cursor: grab; touch-action: none; }
 .bird-draggable:active { cursor: grabbing; }
 .bird-returning { pointer-events: none; overflow: visible; }
@@ -348,6 +377,10 @@ function downloadBird() {
 @keyframes bird-chirp {
   from { transform: rotate(0deg); }
   to { transform: rotate(25deg); }
+}
+[data-singing="true"] [data-beak] {
+  transform-origin: 219px 120px;
+  animation: bird-chirp var(--chirp-beat) ease-in-out infinite alternate;
 }
 [data-singing="true"] [data-wing] {
   transform-origin: 112px 142px;
@@ -381,6 +414,9 @@ function downloadBird() {
 @keyframes bird-bob {
   from { transform: translateY(0) rotate(-1deg); }
   to { transform: translateY(-2px) rotate(1deg); }
+}
+.bird-offscreen [data-beak], .bird-offscreen [data-wing], .bird-offscreen [data-tail], .bird-offscreen [data-body] {
+  animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
   [data-beak], [data-wing], [data-tail], [data-body], [data-legs] { animation: none !important; }
