@@ -1,5 +1,30 @@
 import { test, expect } from '@playwright/test'
 
+for (const width of [320, 1280]) {
+  test(`status dot and label stay fixed across playback states at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 812 })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Reset', exact: true }).click()
+    await page.locator('#duration').fill('0.5')
+    await page.locator('#pause').fill('1')
+    const status = page.getByRole('status', { name: 'Playback status' })
+    const geometry = () => status.evaluate(status => [...status.children].map(element => {
+      const rect = element.getBoundingClientRect()
+      return [rect.x, rect.y, rect.width, rect.height]
+    }))
+    await expect(status).toHaveText('Ready')
+    const ready = await geometry()
+    await page.getByRole('button', { name: 'Play song', exact: true }).click()
+    await expect(status).toHaveText('Playing')
+    expect(await geometry()).toEqual(ready)
+    await expect(status).toHaveText('Pause')
+    expect(await geometry()).toEqual(ready)
+    await page.getByRole('button', { name: 'Stop song', exact: true }).click()
+    await expect(status).toHaveText('Ready')
+    expect(await geometry()).toEqual(ready)
+  })
+}
+
 for (const width of [320, 375, 768]) {
   test(`playback stays reachable while editing at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 812 })

@@ -4,12 +4,13 @@ export function useBirdReflection(settings, bird) {
   const visible = ref(false)
   const birdVisible = ref(true)
   const style = shallowRef({})
-  let observer, timer, anchor, frame, perch, positionDirty = true, lastEditAt = -Infinity
+  let observer, timer, anchor, frame, perch, portrait, positionDirty = true, lastEditAt = -Infinity
 
   function birdInView() {
-    if (observer) return birdVisible.value
-    if (!perch) return true
-    const rect = perch.getBoundingClientRect()
+    // Observer notifications can lag behind scrolling or a bird flying on screen.
+    // Read current geometry only when editing/repositioning, never on a frame loop.
+    if (!portrait && !perch) return true
+    const rect = (portrait || perch).getBoundingClientRect()
     return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth
   }
 
@@ -50,11 +51,12 @@ export function useBirdReflection(settings, bird) {
     if (!visible.value || frame !== undefined) return
     frame = requestAnimationFrame(() => {
       frame = undefined
-      if (!position()) hide()
+      if (birdInView() || !position()) hide()
     })
   }
   function showReflection() {
-    if (birdInView() || !position()) return
+    if (birdInView()) { hide(); return }
+    if (!position()) return
     visible.value = true
     clearTimeout(timer)
     timer = setTimeout(hide, 1800)
@@ -65,11 +67,12 @@ export function useBirdReflection(settings, bird) {
   })
   onMounted(() => {
     perch = bird.value?.$el.querySelector('[data-bird-perch]')
+    portrait = perch?.querySelector('svg')
     birdVisible.value = birdInView()
     if (perch && 'IntersectionObserver' in window) {
       observer = new IntersectionObserver(([entry]) => {
         birdVisible.value = entry.isIntersecting
-        if (entry.isIntersecting) hide()
+        if (birdInView()) hide()
         // Input can arrive just before the observer reports a scroll off-screen.
         else if (performance.now() - lastEditAt < 200) showReflection()
       })

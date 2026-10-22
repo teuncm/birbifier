@@ -35,6 +35,73 @@ function paintFlight() {
 const returning = ref(false)
 let facingLeft = false, lookAngle = 0
 const featherTrail = ref(null)
+// Keep replacement effects outside Vue's per-frame rendering and audio timing.
+let outgoingBird, outgoingAnimation, arrivalAnimation, replacement = 0
+function clearReplacement() {
+  outgoingAnimation?.cancel()
+  outgoingBird?.remove()
+  arrivalAnimation?.cancel()
+  outgoingBird = outgoingAnimation = arrivalAnimation = null
+}
+async function poof() {
+  const version = ++replacement
+  clearReplacement()
+  if (props.ghost || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const svg = portrait.value
+  const rect = svg.getBoundingClientRect()
+  if (rect.bottom <= 0 || rect.top >= innerHeight || rect.right <= 0 || rect.left >= innerWidth) return
+  const outgoing = svg.cloneNode(true)
+  outgoing.removeAttribute('class')
+  outgoing.removeAttribute('style')
+  outgoing.removeAttribute('role')
+  outgoing.removeAttribute('aria-label')
+  outgoing.setAttribute('aria-hidden', 'true')
+  outgoing.setAttribute('data-bird-poof', '')
+  outgoing.setAttribute('data-singing', 'false')
+  outgoing.querySelector('[data-ground]')?.remove()
+  // A copied clip path needs its own ID while both portraits coexist.
+  const clip = outgoing.querySelector('clipPath')
+  const copiedId = `${clipId}-poof-${version}`
+  clip.id = copiedId
+  for (const part of outgoing.querySelectorAll('[clip-path]')) part.setAttribute('clip-path', `url(#${copiedId})`)
+  Object.assign(outgoing.style, {
+    position: 'fixed', left: `${rect.left}px`, top: `${rect.top}px`,
+    width: `${rect.width}px`, height: `${rect.height}px`,
+    pointerEvents: 'none', zIndex: '59',
+  })
+  document.body.append(outgoing)
+  outgoingBird = outgoing
+  outgoingAnimation = outgoing.animate([
+    { opacity: 1, transform: 'scale(1)' },
+    { opacity: 1, transform: 'scale(1)', offset: 0.45 },
+    { opacity: 0, transform: 'scale(0.98)' },
+  ], { duration: 80, easing: 'ease-out' })
+  outgoingAnimation.onfinish = () => outgoing.remove()
+  const color = bird.value.body, vein = bird.value.wing
+  for (let i = 0; i < 12; i++) {
+    featherTrail.value?.drop({
+      x: rect.left + rect.width * (0.3 + Math.random() * 0.4),
+      y: rect.top + rect.height * (0.28 + Math.random() * 0.38),
+      size: Math.max(9, Math.min(14, rect.width * 0.04)) * (0.8 + Math.random() * 0.4),
+      color, vein, burst: true,
+      drift: `${(Math.random() - 0.5) * 40}px`,
+      sway: `${(Math.random() - 0.5) * 42}px`,
+      fall: `${60 + Math.random() * 65}px`,
+      duration: 1800 + Math.random() * 1200,
+      tilt: `${(Math.random() - 0.5) * 100}deg`,
+      turn: `${(Math.random() - 0.5) * 240}deg`,
+      endScale: 0.45 + Math.random() * 0.5,
+    })
+  }
+  await nextTick()
+  if (version !== replacement || !portrait.value) return
+  arrivalAnimation = portrait.value.querySelector('[data-reveal]').animate([
+    { opacity: 0, transform: 'scale(0.65)' },
+    { opacity: 1, transform: 'scale(1.06)', offset: 0.7 },
+    { opacity: 1, transform: 'scale(1)' },
+  ], { delay: 100, duration: 300, easing: 'ease-out', fill: 'backwards' })
+}
+defineExpose({ poof })
 function dropFeather() {
   featherTrail.value?.drop({
     x: flight.left + flight.x + flight.width * 0.45,
@@ -177,6 +244,8 @@ onMounted(() => {
   geometryObserver.observe(document.body)
 })
 onBeforeUnmount(() => {
+  replacement++
+  clearReplacement()
   clearTimeout(shareTimer)
   cancelAnimationFrame(returnFrame)
   cancelAnimationFrame(dragFrame)
@@ -196,28 +265,32 @@ const bird = computed(() => {
     return seed / 4294967296
   }
   const hue = Math.round(25 + (s.frequency - 250) / 7750 * 310)
-  const saturation = 24 + s.cutoff / 15000 * 58
+  const saturation = 55
   const radius = 39 + s.amplitude * 32
   const headScale = 0.69 + (s.duration - 0.5) / 1.5 * 0.62
-  const tail = 22 + s.vibratoDepth / 1200 * 50
+  const tail = 22 + s.tremoloDepth * 50
   const beak = 24 + s.pause * 27
-  const lift = s.tremoloDepth * 27
+  const lift = 12.15
+  const headOffset = (8000 - s.cutoff) / 14750 * 26
+  // Keep the familiar beak at 30%, with thinner/thicker bills on either side.
+  const beakThickness = 1 + ((s.chorus ?? 0.3) - 0.3) * 0.65
   const beakFrequency = s.tremoloDepth > 0.8
     ? s.tremoloFrequency
     : s.vibratoFrequency
-  const footBulk = Math.max(0, Math.min(1, s.chorus ?? 0.3))
   // Keep exaggerated crests, beaks, and long tails inside the portrait.
   const left = Math.min(12, 94 - tail - 8)
-  const top = Math.min(8, 104 - 84 * headScale - lift - 5)
+  const top = Math.min(8, 104 - 84 * headScale - lift + headOffset - 5)
   const right = Math.max(288, 186 + (33 + beak) * headScale + 8)
   const bodyPath = s.shape === 'sine'
     ? `M${152 - radius} 145a${radius} ${radius} 0 1 0 ${radius * 2} 0a${radius} ${radius} 0 1 0 ${-radius * 2} 0Z`
     : s.shape === 'square'
       ? `M${152 - radius} ${145 - radius}h${radius * 2}v${radius * 2}h${-radius * 2}Z`
-      : `M152 ${145 - radius}L${152 + radius} ${145 + radius}H${152 - radius}Z`
+      : `M${152 - radius} ${145 + radius}L${152 + radius} ${145 - radius}V${145 + radius}Z`
   return {
     bodyPath,
     headScale,
+    headOffset,
+    beakThickness,
     viewBox: `${left} ${top} ${right - left} ${240 - top}`,
     centerX: (left + right) / 2,
     body: `hsl(${hue} ${saturation}% 55%)`,
@@ -227,14 +300,16 @@ const bird = computed(() => {
     width: radius,
     height: radius,
     tail,
-    crest: 7 + s.vibratoFrequency / 30 * 29,
+    tailOffset: s.shape === 'saw' ? 30 : 0,
+    crest: 7 + s.vibratoDepth / 1200 * 29,
+    crestSpread: 3 + s.vibratoFrequency / 30 * 36,
     spread: 3 + s.tremoloFrequency / 30 * 36,
     beak,
     lift,
-    footWidth: 2.75 + footBulk * 5.5,
-    legWidth: 2.3 + footBulk * 4.4,
-    toeLength: 4.75 + footBulk * 5.5,
-    stance: 5 + Math.max(0, Math.min(1, (s.cutoff - 250) / 14750)) * 20,
+    footWidth: 4.4,
+    legWidth: 3.62,
+    toeLength: 6.4,
+    stance: 15.5,
     feathers: 3 + Math.round(s.tremoloFrequency / 30 * 6),
     spots: Array.from({ length: 3 + Math.round(s.tremoloDepth * 11) }, () => ({
       x: 128 + random() * 35, y: 136 + random() * 36, r: 1.5 + random() * 2.5,
@@ -300,6 +375,7 @@ async function shareBird() {
     <div ref="portraitFrame" data-bird-perch class="aspect-[23/20] min-h-0 w-full shrink-0" :class="{ 'min-w-0 lg:order-2': $slots.presets }">
     <svg ref="portrait" v-memo="[bird, singing, repeat, returning, airborne, inView]" xmlns="http://www.w3.org/2000/svg" :viewBox="bird.viewBox" class="block h-full w-full" :class="{ 'bird-draggable': !ghost, 'bird-returning': returning, 'bird-airborne': airborne, 'bird-offscreen': !inView && !airborne }" role="img" :aria-label="ghost ? 'Bird reflection' : 'Bird generated from the current sound parameters'" :data-singing="singing" @pointerdown="startDrag" @pointermove="drag" @pointerup="release" @pointercancel="release" @lostpointercapture="release">
       <defs><clipPath :id="clipId"><path :d="bird.bodyPath" /></clipPath></defs>
+      <g data-reveal class="bird-reveal">
       <g ref="facing" data-facing>
       <ellipse data-ground cx="160" cy="227" rx="81" ry="8" fill="#edf3e3" />
       <g data-legs stroke="#665541" stroke-width="4" stroke-linecap="round" fill="none">
@@ -308,8 +384,10 @@ async function shareBird() {
       </g>
       <g :transform="`translate(0 ${-bird.lift})`">
       <g data-body>
+      <g :transform="`translate(${bird.tailOffset} 0)`">
       <g data-tail :fill="bird.wing">
         <path v-for="i in 3" :key="i" :transform="`rotate(${(i - 2) * bird.spread} 116 158)`" :d="`M116 163Q${77 - bird.tail} 148 ${94 - bird.tail} 158L132 150Z`" />
+      </g>
       </g>
       <path data-torso :d="bird.bodyPath" :fill="bird.body" />
       <g :clip-path="`url(#${clipId})`">
@@ -322,11 +400,12 @@ async function shareBird() {
       <path v-for="i in bird.feathers" :key="i" :d="`M${114 + i * 5} 149q14 9 4 21`" fill="none" :stroke="bird.body" stroke-width="2" stroke-linecap="round" />
       </g>
       </g>
+      <g data-head-position :transform="`translate(0 ${bird.headOffset})`">
       <g ref="gaze" data-gaze>
       <g data-head :transform="`translate(186 104) scale(${bird.headScale}) translate(-186 -104)`">
       <g data-crest :fill="bird.wing">
-        <path :transform="`rotate(${-bird.spread} 180 84)`" :d="`M174 86Q162 ${68 - bird.crest} 174 ${60 - bird.crest}Q185 ${66 - bird.crest} 185 88Z`" />
-        <path :transform="`rotate(${bird.spread} 184 84)`" :d="`M180 88Q181 ${62 - bird.crest} 194 ${60 - bird.crest}Q199 66 190 88Z`" />
+        <path :transform="`rotate(${-bird.crestSpread} 180 84)`" :d="`M174 86Q162 ${68 - bird.crest} 174 ${60 - bird.crest}Q185 ${66 - bird.crest} 185 88Z`" />
+        <path :transform="`rotate(${bird.crestSpread} 184 84)`" :d="`M180 88Q181 ${62 - bird.crest} 194 ${60 - bird.crest}Q199 66 190 88Z`" />
       </g>
       <circle cx="186" cy="104" r="39" :fill="bird.body" />
       <ellipse cx="200" cy="113" rx="18" ry="20" :fill="bird.belly" />
@@ -334,9 +413,13 @@ async function shareBird() {
       <circle cx="204" cy="97" r="2" fill="white" />
       <ellipse cx="199" cy="120" rx="7" ry="4" :fill="bird.accent" />
       <circle v-if="repeat" data-face-mark cx="189" cy="112" r="1.5" :fill="bird.wing" opacity="0.65" />
+      <g data-bill :transform="`translate(219 115) scale(1 ${bird.beakThickness}) translate(-219 -115)`">
       <path :d="`M219 104l${bird.beak} 11-${bird.beak} 5Z`" fill="#dc9c3b" />
       <g data-beak :style="{ '--chirp-beat': bird.beat }">
         <path :d="`M219 120l${bird.beak} -5-${bird.beak} 17Z`" fill="#bf792d" />
+      </g>
+      </g>
+      </g>
       </g>
       </g>
       </g>
@@ -362,6 +445,7 @@ async function shareBird() {
 </template>
 
 <style>
+.bird-reveal { transform-box: fill-box; transform-origin: center; }
 .bird-draggable { cursor: grab; touch-action: none; }
 .bird-draggable:active { cursor: grabbing; }
 .bird-returning { pointer-events: none; overflow: visible; }

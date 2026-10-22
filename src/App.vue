@@ -78,7 +78,8 @@ let context, voice, repeatTimer, completionTimer, previewTimer, previewRunning =
 function restartIfActive() {
   if (playing.value || starting.value) void startPlayback()
 }
-function applyPreset(preset, restart = true) {
+function applyPreset(preset, restart = true, animate = true) {
+  if (animate) mainBird.value?.poof()
   lastPresetIndex.value = presets.indexOf(preset)
   Object.assign(settings, preset.settings)
   locks.chorus = true
@@ -91,12 +92,13 @@ function browsePreset(direction) {
   void startPlayback()
 }
 function randomize() {
+  mainBird.value?.poof()
   Object.assign(settings, randomizeSettings(settings, locks))
   void startPlayback()
 }
 function resetSound() {
   stop()
-  applyPreset(presets[0], false)
+  applyPreset(presets[0], false, false)
 }
 function toggleAllControls() {
   const next = !anyExpanded.value
@@ -333,10 +335,10 @@ onBeforeUnmount(() => {
       </div>
     </header>
     <main class="app-main pb-4 pt-2 lg:pb-6 lg:pt-3" @pointerdown.capture="reflection.rememberControl" @keydown.capture="reflection.rememberControl" @input.capture="reflection.rememberControl" @change.capture="reflection.rememberControl">
-      <div class="mb-3 flex flex-wrap items-center gap-2">
-          <button class="button-secondary" :disabled="allLocked" title="Randomize unlocked parameters" @click="randomize"><AppIcon name="dice" :size="16" />Randomize</button>
-          <button class="button-secondary reset-button" @click="resetSound"><AppIcon name="reset" :size="16" />Reset</button>
-          <button class="button-secondary" :aria-expanded="anyExpanded" aria-controls="wave-controls vibrato-controls tremolo-controls timing-controls effects-controls" @click="toggleAllControls"><AppIcon :name="anyExpanded ? 'up' : 'down'" :size="16" />{{ anyExpanded ? 'Collapse' : 'Expand' }}</button>
+      <div class="mb-3 flex items-center gap-2" role="group" aria-label="Sound actions">
+          <button class="button-secondary whitespace-nowrap px-2 sm:px-3.5" :disabled="allLocked" title="Randomize unlocked parameters" @click="randomize"><AppIcon name="dice" :size="16" />Randomize</button>
+          <button class="button-secondary reset-button whitespace-nowrap px-2 sm:px-3.5" @click="resetSound"><AppIcon name="reset" :size="16" />Reset</button>
+          <button class="button-secondary ml-auto whitespace-nowrap px-2 sm:px-3.5" :aria-expanded="anyExpanded" aria-controls="wave-controls vibrato-controls tremolo-controls timing-controls effects-controls" @click="toggleAllControls"><AppIcon :name="anyExpanded ? 'up' : 'down'" :size="16" />{{ anyExpanded ? 'Collapse' : 'Expand' }}</button>
       </div>
       <div class="grid grid-cols-2 items-start gap-2 sm:gap-3 lg:grid-cols-[1fr_320px] lg:grid-rows-[auto_1fr]">
         <div class="contents lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:block lg:min-w-0 lg:space-y-3">
@@ -362,7 +364,7 @@ onBeforeUnmount(() => {
                 <button class="repeat-button px-4" :class="{ selected: loop, 'repeat-glow': repeatGlow }" :aria-pressed="loop" aria-label="Repeat song" :title="loop ? 'Repeat on' : 'Repeat off'" @animationend="repeatGlow = false" @click="loop = !loop"><AppIcon name="repeat" :size="18" /></button>
                 <button ref="downloadButton" class="repeat-button px-4" :class="{ 'keyboard-pressed': downloadPressed }" :disabled="exporting" :aria-busy="exporting" aria-label="Download (WAV)" :title="exporting ? 'Saving…' : 'Download (WAV)'" @click="download"><AppIcon name="download" :size="18" /></button>
               </div>
-              <span class="flex items-center gap-2 text-xs text-muted" role="status" aria-label="Playback status"><span class="h-1.5 w-1.5 rounded-full" :class="playing ? 'bg-moss' : 'bg-[#9ba88f]'"></span>{{ waiting ? 'Pause' : playing ? 'Playing' : 'Ready' }}</span>
+              <span class="flex shrink-0 items-center gap-2 text-xs text-muted" role="status" aria-label="Playback status"><span class="playback-status-dot h-1.5 w-1.5 shrink-0 rounded-full" :class="playing ? 'bg-moss' : 'bg-[#9ba88f]'" :data-playing="playing && !waiting" aria-hidden="true"></span><span class="w-12 text-left">{{ waiting ? 'Pause' : playing ? 'Playing' : 'Ready' }}</span></span>
             </div>
           </section>
           <section class="panel col-span-2 row-start-2 p-2 sm:p-3" aria-labelledby="synth-heading">
@@ -378,21 +380,21 @@ onBeforeUnmount(() => {
                 </button>
               </div>
             </fieldset>
-            <div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+            <div class="parameter-pair mt-3">
               <RangeControl id="frequency" v-model="settings.frequency" label="Frequency" lock-label="Wave frequency" :min="250" :max="8000" :step="10" unit="Hz" :locked="locks.frequency" :expanded="expanded.wave" @toggle-lock="locks.frequency = !locks.frequency" />
               <RangeControl id="amplitude" v-model="settings.amplitude" label="Amplitude" :min="MIN_AMPLITUDE" :max="1" step="any" unit="dB" :locked="locks.amplitude" :expanded="expanded.wave" @toggle-lock="locks.amplitude = !locks.amplitude" />
             </div>
             </ControlGroup>
             <ControlGroup id="vibrato-controls" title="Vibrato" caption="Pitch LFO" :expanded="expanded.vibrato" @toggle="expanded.vibrato = !expanded.vibrato">
               <LfoVisualizer v-if="expanded.vibrato" id="vibrato-lfo" name="Vibrato" v-model:frequency="settings.vibratoFrequency" v-model:depth="settings.vibratoDepth" :max-frequency="30" :max-depth="1200" :depth-step="10" />
-              <div class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <div class="parameter-pair">
                 <RangeControl id="vibrato-frequency" v-model="settings.vibratoFrequency" label="Frequency" lock-label="Vibrato frequency" :min="0" :max="30" :step="0.1" unit="Hz" :locked="locks.vibratoFrequency" :expanded="expanded.vibrato" @toggle-lock="locks.vibratoFrequency = !locks.vibratoFrequency" />
                 <RangeControl id="vibrato-depth" v-model="settings.vibratoDepth" label="Depth" lock-label="Vibrato depth" :min="0" :max="1200" :step="10" unit="cents" :locked="locks.vibratoDepth" :expanded="expanded.vibrato" @toggle-lock="locks.vibratoDepth = !locks.vibratoDepth" />
               </div>
             </ControlGroup>
             <ControlGroup id="tremolo-controls" title="Tremolo" caption="Volume LFO" :expanded="expanded.tremolo" @toggle="expanded.tremolo = !expanded.tremolo">
               <LfoVisualizer v-if="expanded.tremolo" id="tremolo-lfo" name="Tremolo" v-model:frequency="settings.tremoloFrequency" v-model:depth="settings.tremoloDepth" :max-frequency="30" :max-depth="1" :depth-step="0.01" />
-              <div class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <div class="parameter-pair">
                 <RangeControl id="tremolo-frequency" v-model="settings.tremoloFrequency" label="Frequency" lock-label="Tremolo frequency" :min="0" :max="30" :step="0.1" unit="Hz" :locked="locks.tremoloFrequency" :expanded="expanded.tremolo" @toggle-lock="locks.tremoloFrequency = !locks.tremoloFrequency" />
                 <RangeControl id="tremolo-depth" v-model="settings.tremoloDepth" label="Depth" lock-label="Tremolo depth" :min="0" :max="1" :step="0.01" :scale="100" unit="%" :locked="locks.tremoloDepth" :expanded="expanded.tremolo" @toggle-lock="locks.tremoloDepth = !locks.tremoloDepth" />
               </div>
@@ -409,14 +411,14 @@ onBeforeUnmount(() => {
           <section class="panel space-y-2 p-2 sm:p-3" aria-labelledby="master-heading">
           <h2 id="master-heading" class="text-sm font-semibold leading-tight">Master</h2>
           <ControlGroup id="effects-controls" title="Effects" caption="Global" :expanded="expanded.effects" @toggle="expanded.effects = !expanded.effects">
+            <div class="parameter-pair">
             <RangeControl id="cutoff" v-model="settings.cutoff" label="Low pass" lock-label="Cutoff" :min="250" :max="15000" :step="50" unit="Hz" :locked="locks.cutoff" :expanded="expanded.effects" @toggle-lock="locks.cutoff = !locks.cutoff" />
-            <div class="mt-3">
               <RangeControl id="chorus" v-model="settings.chorus" label="Chorus" :min="0" :max="1" :step="0.01" :scale="100" unit="%" :locked="locks.chorus" :expanded="expanded.effects" @toggle-lock="locks.chorus = !locks.chorus" />
             </div>
           </ControlGroup>
           <ControlGroup id="timing-controls" title="Timing" :expanded="expanded.timing" @toggle="expanded.timing = !expanded.timing">
+            <div class="parameter-pair">
             <RangeControl id="duration" v-model="settings.duration" label="Duration" lock-label="Chirp duration" :min="0.5" :max="2" :step="0.05" unit="s" :locked="locks.duration" :expanded="expanded.timing" @toggle-lock="locks.duration = !locks.duration" />
-            <div class="mt-3">
               <RangeControl id="pause" v-model="settings.pause" label="Pause" lock-label="Repeat pause" :min="0" :max="1" :step="0.05" unit="s" :locked="locks.pause" :expanded="expanded.timing" @toggle-lock="locks.pause = !locks.pause" />
             </div>
           </ControlGroup>

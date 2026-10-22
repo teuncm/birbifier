@@ -32,7 +32,7 @@ Preview and WAV export share a four-entry cache of full-quality audio buffers, i
 
 Choose sine, square, or sawtooth. Wave frequency controls pitch in Hz, and amplitude controls volume. Vibrato adds pitch modulation (frequency in Hz, depth in cents); tremolo adds volume modulation (frequency in Hz, depth in percent). Set either modulation's depth to zero to disable it. The global low-pass cutoff softens high frequencies.
 
-Synth groups Wave, Vibrato, and Tremolo. Master groups Effects (low-pass filter and chorus) and Timing. Toggle any group header or use Collapse / Expand. Collapsed groups retain labeled values and working parameter locks; expanded groups show the sliders, wave choices, and LFO visualizers. Collapsing preserves settings, locks, and playback.
+Randomize, Reset, and Expand/Collapse share one action row, with Expand/Collapse on the right. Synth groups Wave, Vibrato, and Tremolo. Slider pairs stack on narrow cards and sit side by side when each slider has at least 240 px, including Effects and Timing on wider screens. Master groups Effects (low-pass filter and chorus) and Timing. Toggle any group header or use Collapse / Expand. Collapsed groups retain labeled values and working parameter locks; expanded groups show the sliders, wave choices, and LFO visualizers. Collapsing preserves settings, locks, and playback.
 
 The Presets dropdown offers 100 numbered sounds (001–100), including whistles, warbles, rattles, low calls, and electronic chirps. Use the left/right buttons to browse and immediately play the selected sound, wrapping at either end. Arrow navigation restarts playback from the beginning and preserves the Repeat setting. After custom edits, browsing continues from the last selected preset. Selecting a preset loads all parameters, including its repeat pause. Edits or randomization show Custom when the settings no longer match a preset.
 
@@ -44,7 +44,11 @@ Randomize changes every unlocked parameter, including wave shape, duration, repe
 
 Audio starts after pressing Play or a preset arrow. All synthesis and export happen locally in the browser. A recent browser with Web Audio support is required. Neural-network learning and multiple segments are future work.
 
-Your bird is a generated SVG portrait based on the current sound settings. Pitch and filter shape its colors; wave shape and amplitude shape its body; vibrato shapes its crest and tail; tremolo shapes its feathers and markings; duration and repeat pause shape its proportions and beak. Randomizing creates a new bird, and returning to the same settings restores the same portrait. Its beak moves during chirps and closes during repeat pauses or after stopping. Reduced-motion mode uses a still open beak while singing. The bird card footer offers Share and SVG download. Share opens the device share sheet where available, otherwise copies the link; if clipboard access is unavailable, a selectable link is shown. Shared links restore the sound and Repeat state without autoplay. Invalid links fall back to the normal random preset.
+Your bird is a generated SVG portrait based on the current sound settings. Wave frequency shapes its color; wave
+shape and amplitude shape its body. Vibrato frequency spreads its crest and depth sizes it; tremolo does the same
+for its tail. Low pass raises or lowers its head, and chorus thickens its beak around the familiar 30% setting.
+Duration and repeat pause shape its head size and beak length. Changing presets or randomizing poofs the outgoing bird into falling feathers and pops the new bird in.
+Reduced-motion mode skips these transitions. Returning to the same settings restores the same portrait. Its beak moves during chirps and closes during repeat pauses or after stopping. Reduced-motion mode uses a still open beak while singing. The bird card footer offers Share and SVG download. Share opens the device share sheet where available, otherwise copies the link; if clipboard access is unavailable, a selectable link is shown. Shared links restore the sound and Repeat state without autoplay. Invalid links fall back to the normal random preset.
 
 ## Verify
 

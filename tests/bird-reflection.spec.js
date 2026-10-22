@@ -42,3 +42,37 @@ test('editing with the main bird visible does not show a reflection', async ({ p
   await change(page, 'frequency', 2000)
   await expect(page.locator('.bird-reflection')).toHaveCount(0)
 })
+
+test('stale off-screen observer notifications cannot show a bubble beside a visible bird', async ({ page }) => {
+  await page.addInitScript(() => {
+    const NativeObserver = window.IntersectionObserver
+    window.IntersectionObserver = class extends NativeObserver {
+      constructor(callback, options) {
+        super((entries, observer) => callback(entries.map(entry => entry.target.matches('[data-bird-perch]')
+          ? { target: entry.target, isIntersecting: false } : entry), observer), options)
+      }
+    }
+  })
+  await page.goto('/')
+  await expect(page.getByRole('img', { name: 'Bird generated' })).toBeInViewport()
+  await change(page, 'frequency', 2100)
+  await expect(page.locator('.bird-reflection')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Next preset' }).click()
+  await change(page, 'vibrato-depth', 500)
+  await expect(page.locator('.bird-reflection')).toHaveCount(0)
+})
+
+test('a dragged bird on screen suppresses the bubble even when its perch is off screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 740 })
+  await page.goto('/')
+  const bird = page.getByRole('img', { name: 'Bird generated' })
+  const box = await bird.boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 35, box.y + box.height / 2 + 50)
+  await page.evaluate(() => document.querySelector('#duration').scrollIntoView())
+  await expect(bird).toBeInViewport()
+  await change(page, 'duration', 1.7)
+  await expect(page.locator('.bird-reflection')).toHaveCount(0)
+  await page.mouse.up()
+})

@@ -69,6 +69,8 @@
 .reset-button, .error-message { background: var(--danger-surface); color: var(--danger-text); border-color: var(--danger-line); }
 .reset-button:hover { background: color-mix(in srgb, var(--danger-surface), var(--danger-text) 10%); }
 .bird-reflection { background: var(--surface); }
+.playback-status-dot { transition: box-shadow 180ms ease; }
+.playback-status-dot[data-playing="true"] { box-shadow: 0 0 6px 2px color-mix(in srgb, var(--accent), transparent 45%); }
 @media (width < 64rem) {
   html { scroll-padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px)); }
   .app-main { padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px)); }
@@ -107,6 +109,7 @@
   .shape-button { @apply flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border border-line bg-[var(--raised)] text-xs text-muted hover:border-[var(--accent)]; }
   .shape-button.selected { @apply border-[var(--accent)] bg-sage font-semibold text-moss; }
   .value-readout { @apply rounded-md bg-[var(--selected)] px-2 py-1 font-mono text-xs text-[var(--accent)]; }
+  .parameter-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 0.5rem 1rem; }
   .control-group { @apply overflow-hidden rounded-lg border border-line-subtle bg-surface; }
   .group-toggle { @apply flex min-h-9 w-full items-center justify-between gap-2 border-b border-line-subtle bg-[var(--selected)] px-2 py-1 text-left text-sm font-semibold text-moss hover:bg-sage sm:px-3; }
   .preset-select { @apply min-h-10 w-full cursor-pointer rounded-lg border border-[var(--line-strong)] bg-sage px-3 text-sm font-medium text-moss; }
