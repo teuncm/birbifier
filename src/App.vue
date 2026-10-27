@@ -13,9 +13,11 @@ import { MIN_AMPLITUDE, randomizeSettings } from './randomize.js'
 import { buildWaveform } from './waveform.js'
 import { useBirdReflection } from './useBirdReflection.js'
 import { useControlFeedback } from './useControlFeedback.js'
+import { useMobileInteractions } from './useMobileInteractions.js'
 import { decodeBird } from './share.js'
 
 useControlFeedback()
+useMobileInteractions()
 
 const sharedBird = decodeBird(new URLSearchParams(window.location.search).get('p'))
 const sharedPresetIndex = sharedBird ? presets.findIndex(preset => Object.keys(preset.settings).every(key => preset.settings[key] === sharedBird.settings[key])) : -1
@@ -327,7 +329,7 @@ onBeforeUnmount(() => {
   <div class="mx-auto max-w-[1160px] px-2 sm:px-5 lg:px-8">
     <header class="flex h-16 items-center justify-between">
       <h1><a href="./" class="flex items-center gap-3 text-xl font-bold tracking-tight" aria-label="Birbifier home">
-        <img src="/birb.svg" width="38" height="38" alt="" />Birbifier
+        <img src="/birb.svg" width="38" height="38" alt="" draggable="false" />Birbifier
       </a></h1>
       <div class="flex items-center gap-3">
         <a href="https://teuncm.nl/" class="text-sm font-medium text-muted hover:text-moss hover:underline" aria-label="Teun M. — teuncm.nl">Teun M. ↗</a>
